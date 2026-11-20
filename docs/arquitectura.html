@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Interviewer Max — Arquitectura de los bots</title>
+<style>
+:root {
+  --bg: #f6f7fb; --card: #ffffff; --text: #1d2033; --muted: #5d6280; --line: #d9dcea; --shadow: 0 6px 24px rgba(40,50,110,.08);
+  --teal: #0fa597; --teal-bg: #dff6f2;
+  --amber: #e08a00; --amber-bg: #fff0d1;
+  --indigo: #4c5bd4; --indigo-bg: #e3e6fb;
+  --violet: #8a4fe0; --violet-bg: #ede2fc;
+  --orange: #e8590c; --orange-bg: #ffe5d3;
+  --green: #2f9e44; --green-bg: #dcf5e1;
+  --rose: #d6336c; --rose-bg: #fde0eb;
+  --blue: #1c7ed6; --blue-bg: #dbeafc;
+  --gray: #6b7090; --gray-bg: #eceef6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #11121a; --card: #1b1d2b; --text: #eceefa; --muted: #a2a7c4; --line: #34374f; --shadow: 0 6px 24px rgba(0,0,0,.4);
+    --teal: #3ed9c8; --teal-bg: #12332f;
+    --amber: #ffb43b; --amber-bg: #3a2c0d;
+    --indigo: #8b96ff; --indigo-bg: #232850;
+    --violet: #b98cff; --violet-bg: #2d2050;
+    --orange: #ff8a4a; --orange-bg: #402010;
+    --green: #5fd47a; --green-bg: #17341d;
+    --rose: #ff7aa8; --rose-bg: #3f1a2a;
+    --blue: #5eb0ff; --blue-bg: #14304c;
+    --gray: #a2a7c4; --gray-bg: #272a3d;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 "Segoe UI", system-ui, sans-serif; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px 60px; }
+header.hero { padding: 40px 0 18px; }
+header.hero h1 { margin: 0 0 6px; font-size: clamp(26px, 5vw, 38px); letter-spacing: -.02em;
+  background: linear-gradient(90deg, var(--indigo), var(--violet), var(--rose), var(--orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+header.hero p { margin: 0; color: var(--muted); max-width: 70ch; }
+h2 { font-size: 22px; margin: 38px 0 14px; display: flex; align-items: center; gap: 10px; }
+h2::before { content: ""; width: 6px; height: 24px; border-radius: 3px; background: linear-gradient(var(--indigo), var(--rose)); }
+
+/* ---- Esquema ---- */
+.diagram { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 10px; box-shadow: var(--shadow); }
+svg { width: 100%; height: auto; display: block; }
+svg text { font-family: "Segoe UI", system-ui, sans-serif; fill: var(--text); }
+svg .t { font-size: 15px; font-weight: 700; }
+svg .s { font-size: 11.5px; fill: var(--muted); }
+svg .lbl { font-size: 11px; fill: var(--muted); font-style: italic; }
+svg .box { stroke-width: 2.2; }
+.teal { fill: var(--teal-bg); stroke: var(--teal); }
+.amber { fill: var(--amber-bg); stroke: var(--amber); }
+.indigo { fill: var(--indigo-bg); stroke: var(--indigo); }
+.violet { fill: var(--violet-bg); stroke: var(--violet); }
+.orange { fill: var(--orange-bg); stroke: var(--orange); }
+.green { fill: var(--green-bg); stroke: var(--green); }
+.rose { fill: var(--rose-bg); stroke: var(--rose); }
+.blue { fill: var(--blue-bg); stroke: var(--blue); }
+.gray { fill: var(--gray-bg); stroke: var(--gray); }
+.arrow { stroke: var(--muted); stroke-width: 2; fill: none; marker-end: url(#ah); }
+.dash { stroke-dasharray: 6 5; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 10px 8px 4px; color: var(--muted); font-size: 12.5px; }
+.legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+/* ---- Tarjetas ---- */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 16px; }
+.card { background: var(--card); border: 1px solid var(--line); border-top: 5px solid var(--c); border-radius: 16px; padding: 18px 18px 16px; box-shadow: var(--shadow); }
+.card .head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.card .ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 23px; background: var(--cb); }
+.card h3 { margin: 0; font-size: 17px; line-height: 1.2; }
+.card .role { margin: 0; color: var(--muted); font-size: 13px; }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 2px 9px; border-radius: 99px; background: var(--cb); color: var(--c); margin: 6px 6px 0 0; }
+.card ul { margin: 10px 0 8px; padding-left: 0; list-style: none; }
+.card li { padding: 4px 0 4px 22px; position: relative; font-size: 14px; }
+.card li::before { content: "▸"; position: absolute; left: 3px; color: var(--c); font-weight: 700; }
+.card .io { margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: var(--cb); font-size: 12.5px; color: var(--text); }
+.card .io b { color: var(--c); }
+.card code, .files { font: 12px ui-monospace, Consolas, monospace; color: var(--muted); }
+.files { margin-top: 8px; }
+.c-teal { --c: var(--teal); --cb: var(--teal-bg); } .c-amber { --c: var(--amber); --cb: var(--amber-bg); }
+.c-indigo { --c: var(--indigo); --cb: var(--indigo-bg); } .c-violet { --c: var(--violet); --cb: var(--violet-bg); }
+.c-orange { --c: var(--orange); --cb: var(--orange-bg); } .c-green { --c: var(--green); --cb: var(--green-bg); }
+.c-rose { --c: var(--rose); --cb: var(--rose-bg); } .c-blue { --c: var(--blue); --cb: var(--blue-bg); }
+
+/* ---- Flujos ---- */
+.flows { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 16px; }
+.flow { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; box-shadow: var(--shadow); }
+.flow h3 { margin: 0 0 10px; font-size: 16px; }
+.flow ol { list-style: none; counter-reset: s; margin: 0; padding: 0; }
+.flow li { counter-increment: s; position: relative; padding: 6px 0 6px 36px; min-height: 36px; font-size: 14px; }
+.flow li::before { content: counter(s); position: absolute; left: 0; top: 5px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; background: var(--c); }
+.note { margin-top: 28px; padding: 14px 16px; border-radius: 14px; background: var(--amber-bg); border: 1px solid var(--amber); font-size: 14px; }
+footer { margin-top: 30px; color: var(--muted); font-size: 12.5px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>Interviewer Max · Arquitectura de los bots</h1>
+  <p>Cinco bots especializados que se reparten el trabajo: <b>oyen</b> la entrevista, <b>conocen</b> tu perfil, <b>te sugieren</b> qué decir en directo, <b>te entrevistan</b> en simulacros y <b>te corrigen</b> con cariño.</p>
+</header>
+
+<!-- ============ ESQUEMA ============ -->
+<h2>Esquema de arquitectura</h2>
+<div class="diagram">
+<svg viewBox="0 0 1000 730" role="img" aria-label="Esquema de arquitectura de Interviewer Max">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/>
+    </marker>
+  </defs>
+
+  <!-- Fila A: entradas -->
+  <rect class="box gray" x="20" y="10" width="180" height="70" rx="14"/>
+  <text class="t" x="110" y="40" text-anchor="middle">🔊 Audio del sistema</text>
+  <text class="s" x="110" y="60" text-anchor="middle">lo que dice el entrevistador</text>
+
+  <rect class="box gray" x="220" y="10" width="180" height="70" rx="14"/>
+  <text class="t" x="310" y="40" text-anchor="middle">🎙 Tu micrófono</text>
+  <text class="s" x="310" y="60" text-anchor="middle">lo que respondes tú</text>
+
+  <rect class="box gray" x="410" y="10" width="180" height="70" rx="14"/>
+  <text class="t" x="500" y="40" text-anchor="middle">⌨️ Texto escrito</text>
+  <text class="s" x="500" y="60" text-anchor="middle">pregunta o respuesta manual</text>
+
+  <rect class="box gray" x="600" y="10" width="380" height="70" rx="14"/>
+  <text class="t" x="790" y="40" text-anchor="middle">📄 Perfil  ·  🐙 GitHub  ·  💼 Oferta</text>
+  <text class="s" x="790" y="60" text-anchor="middle">tu CV, historias STAR, repos y puesto objetivo</text>
+
+  <path class="arrow" d="M110 80 V130"/>
+  <path class="arrow" d="M310 80 V130"/>
+  <path class="arrow" d="M790 80 V130"/>
+  <path class="arrow" d="M500 80 V260"/>
+
+  <!-- Fila B: Oído y Bibliotecario -->
+  <rect class="box teal" x="20" y="130" width="400" height="90" rx="16"/>
+  <text class="t" x="220" y="162" text-anchor="middle">👂 BOT OÍDO · transcriptor</text>
+  <text class="s" x="220" y="183" text-anchor="middle">segmenta por silencios → Whisper local o Deepgram</text>
+  <text class="s" x="220" y="201" text-anchor="middle">español + inglés · filtra ruido y alucinaciones</text>
+
+  <rect class="box amber" x="580" y="130" width="400" height="90" rx="16"/>
+  <text class="t" x="780" y="162" text-anchor="middle">📚 BOT BIBLIOTECARIO · contexto</text>
+  <text class="s" x="780" y="183" text-anchor="middle">importa tus repos y junta perfil + oferta</text>
+  <text class="s" x="780" y="201" text-anchor="middle">guarda claves cifradas · prepara el contexto de Claude</text>
+
+  <path class="arrow" d="M220 220 V260"/>
+  <path class="arrow" d="M780 220 V260"/>
+
+  <!-- Fila C: Orquestador -->
+  <rect class="box indigo" x="20" y="260" width="960" height="84" rx="16"/>
+  <text class="t" x="500" y="292" text-anchor="middle">🧠 ORQUESTADOR · proceso principal (main.ts)</text>
+  <text class="s" x="500" y="313" text-anchor="middle">decide quién habla y a quién escuchar · espera a que acabe la frase · cancela respuestas viejas · atajos globales</text>
+  <text class="s" x="500" y="330" text-anchor="middle">modo EN VIVO (copiloto)   ⇄   modo SIMULACRO (entrevistador + coach)</text>
+
+  <path class="arrow" d="M170 344 V394"/>
+  <path class="arrow" d="M500 344 V394"/>
+  <path class="arrow" d="M830 344 V394"/>
+  <text class="lbl" x="178" y="372">entrevista real</text>
+  <text class="lbl" x="508" y="372">simulacro</text>
+  <text class="lbl" x="838" y="372">simulacro</text>
+
+  <!-- Fila D: bots que piensan -->
+  <rect class="box violet" x="20" y="394" width="300" height="94" rx="16"/>
+  <text class="t" x="170" y="426" text-anchor="middle">💭 BOT COPILOTO</text>
+  <text class="s" x="170" y="447" text-anchor="middle">2-4 viñetas cortas para decir</text>
+  <text class="s" x="170" y="465" text-anchor="middle">solo con tus hechos reales</text>
+
+  <rect class="box orange" x="350" y="394" width="300" height="94" rx="16"/>
+  <text class="t" x="500" y="426" text-anchor="middle">🎤 BOT ENTREVISTADOR</text>
+  <text class="s" x="500" y="447" text-anchor="middle">pregunta hablando · 13 puestos</text>
+  <text class="s" x="500" y="465" text-anchor="middle">repregunta sobre lo que dijiste</text>
+
+  <rect class="box green" x="680" y="394" width="300" height="94" rx="16"/>
+  <text class="t" x="830" y="426" text-anchor="middle">📝 BOT COACH</text>
+  <text class="s" x="830" y="447" text-anchor="middle">feedback ✅ ⚠️ 💡 hablado</text>
+  <text class="s" x="830" y="465" text-anchor="middle">refuerza tus logros (impostor)</text>
+
+  <path class="arrow" d="M170 488 V538"/>
+  <path class="arrow" d="M500 488 V538"/>
+  <path class="arrow" d="M830 488 V538"/>
+
+  <!-- Fila E: Claude -->
+  <rect class="box rose" x="20" y="538" width="960" height="84" rx="16"/>
+  <text class="t" x="500" y="570" text-anchor="middle">☁️ CLAUDE · el cerebro que redacta</text>
+  <text class="s" x="500" y="591" text-anchor="middle">Opción A: API key de Anthropic (streaming + caché del perfil)</text>
+  <text class="s" x="500" y="608" text-anchor="middle">Opción B: tu sesión de Claude Code (claude -p) — sin API key</text>
+
+  <path class="arrow" d="M500 622 V664"/>
+  <text class="lbl" x="512" y="648">respuesta en streaming</text>
+
+  <!-- Fila F: Salida -->
+  <rect class="box blue" x="20" y="664" width="960" height="56" rx="16"/>
+  <text class="t" x="500" y="689" text-anchor="middle">💬 VENTANA CHAT  +  🔊 VOZ DEL BOT</text>
+  <text class="s" x="500" y="707" text-anchor="middle">burbujas entrevistador / tú / 💭 Claude / 🤖 bot / 📝 feedback · el micro se pausa mientras el bot habla</text>
+</svg>
+<div class="legend">
+  <span><i style="background:var(--teal)"></i>Oído</span>
+  <span><i style="background:var(--amber)"></i>Bibliotecario</span>
+  <span><i style="background:var(--indigo)"></i>Orquestador</span>
+  <span><i style="background:var(--violet)"></i>Copiloto</span>
+  <span><i style="background:var(--orange)"></i>Entrevistador</span>
+  <span><i style="background:var(--green)"></i>Coach</span>
+  <span><i style="background:var(--rose)"></i>Claude</span>
+  <span><i style="background:var(--blue)"></i>Interfaz</span>
+</div>
+</div>
+
+<!-- ============ FUNCIONALIDADES ============ -->
+<h2>Funcionalidades de cada bot</h2>
+<div class="grid">
+
+  <section class="card c-teal">
+    <div class="head"><div class="ico">👂</div><div><h3>Bot Oído</h3><p class="role">Escucha y transcribe la llamada</p></div></div>
+    <span class="tag">Siempre activo</span><span class="tag">Sin claves (local)</span>
+    <ul>
+      <li>Captura el <b>audio del sistema</b> (entrevistador) y tu <b>micrófono</b> por separado.</li>
+      <li>Segmenta por silencios (pausa de 0,9 s, máx. 20 s) y conserva un pre-roll para no cortar palabras.</li>
+      <li><b>Whisper local</b> (WASM) sin clave, o <b>Deepgram</b> en streaming si quieres más rapidez.</li>
+      <li>Español e inglés, con detección automática.</li>
+      <li>Filtra ruido y frases fantasma de Whisper («[música]», «…»).</li>
+      <li>Se pausa mientras habla el bot para no transcribirse a sí mismo.</li>
+    </ul>
+    <div class="io"><b>Entra:</b> audio · <b>Sale:</b> texto etiquetado «entrevistador» / «tú»</div>
+    <div class="files">overlay.ts · whisper-worker.ts · stt.ts</div>
+  </section>
+
+  <section class="card c-amber">
+    <div class="head"><div class="ico">📚</div><div><h3>Bot Bibliotecario</h3><p class="role">Conoce quién eres de verdad</p></div></div>
+    <span class="tag">Contexto</span><span class="tag">Claves cifradas</span>
+    <ul>
+      <li>Importa tus <b>repos de GitHub</b>: hasta 10 sin forks, lenguajes, topics y extracto del README.</li>
+      <li>Admite token para repos privados (opcional).</li>
+      <li>Guarda tu <b>perfil</b>: CV, logros e historias situación → acción → resultado.</li>
+      <li>Añade la <b>oferta / puesto objetivo</b> para afinar preguntas y respuestas.</li>
+      <li>Cifra las claves con el almacén del sistema (<code>safeStorage</code>).</li>
+      <li>Entrega a Claude un contexto único y cacheado, para respuestas rápidas.</li>
+    </ul>
+    <div class="io"><b>Entra:</b> perfil, GitHub, oferta · <b>Sale:</b> contexto personal para todos los bots</div>
+    <div class="files">github.ts · store.ts · llm.ts</div>
+  </section>
+
+  <section class="card c-indigo">
+    <div class="head"><div class="ico">🧠</div><div><h3>Orquestador</h3><p class="role">El director de orquesta</p></div></div>
+    <span class="tag">Proceso principal</span>
+    <ul>
+      <li>Enruta cada frase: en <b>vivo</b> responde el copiloto; en <b>simulacro</b> solo cuenta lo que dices tú.</li>
+      <li>Espera a que el entrevistador termine (y ≥ 4 palabras) antes de pedir respuesta.</li>
+      <li>Cancela la respuesta anterior si llega otra pregunta.</li>
+      <li>Mantiene el historial reciente de la conversación.</li>
+      <li>Atajos: <code>Ctrl+Shift+H</code> ocultar · <code>C</code> click-through · <code>Espacio</code> responder ya · <code>S</code> ajustes.</li>
+    </ul>
+    <div class="io"><b>Entra:</b> transcripciones y botones · <b>Sale:</b> órdenes a los bots y eventos a la ventana</div>
+    <div class="files">main.ts · preload.ts</div>
+  </section>
+
+  <section class="card c-violet">
+    <div class="head"><div class="ico">💭</div><div><h3>Bot Copiloto</h3><p class="role">Te sopla qué decir en la entrevista real</p></div></div>
+    <span class="tag">Modo en vivo</span>
+    <ul>
+      <li>2-4 <b>viñetas cortas</b> (≈12 palabras) listas para decir en primera persona.</li>
+      <li>Responde en el <b>mismo idioma</b> que la pregunta.</li>
+      <li>Usa <b>solo hechos de tu perfil y GitHub</b>: nunca inventa empleos, cifras ni tecnologías.</li>
+      <li>Si no lo sabes, propone un enfoque honesto: qué sabes, cómo razonarías y cómo lo aprenderías.</li>
+      <li>Prioriza un ejemplo STAR en preguntas de comportamiento.</li>
+      <li>Botón «Responder ya» o escribe la pregunta tú mismo.</li>
+    </ul>
+    <div class="io"><b>Entra:</b> pregunta + últimos 8 turnos · <b>Sale:</b> viñetas en streaming</div>
+    <div class="files">llm.ts (streamAnswer)</div>
+  </section>
+
+  <section class="card c-orange">
+    <div class="head"><div class="ico">🎤</div><div><h3>Bot Entrevistador</h3><p class="role">Te entrena con simulacros</p></div></div>
+    <span class="tag">Modo simulacro</span><span class="tag">13 puestos</span>
+    <ul>
+      <li>Elige <b>trabajo</b>: Backend, Frontend, Full Stack, banca/fintech, DevOps, Datos, QA, Móvil, Ciberseguridad, PM, Analista, Soporte… o uno propio.</li>
+      <li>Elige <b>tipo</b> (mixta, RR. HH., técnica) y <b>nivel</b> (junior, medio, senior).</li>
+      <li>Pregunta <b>hablando</b> y por escrito, basándose en tu perfil y tus repos.</li>
+      <li>Alterna comportamiento, técnica, motivación y preguntas incómodas.</li>
+      <li><b>No repite</b> preguntas y <b>repregunta</b> sobre lo que acabas de decir.</li>
+      <li>Termina tu turno por pausa (6 s), botón «Terminé» o texto escrito; puedes saltar o terminar.</li>
+    </ul>
+    <div class="io"><b>Entra:</b> puesto, tipo, nivel, tus respuestas · <b>Sale:</b> siguiente pregunta</div>
+    <div class="files">practice.ts · jobs.ts</div>
+  </section>
+
+  <section class="card c-green">
+    <div class="head"><div class="ico">📝</div><div><h3>Bot Coach</h3><p class="role">Te corrige con cariño y honestidad</p></div></div>
+    <span class="tag">Modo simulacro</span><span class="tag">Anti-impostor</span>
+    <ul>
+      <li>Feedback en 3 líneas (≤ 70 palabras): <b>✅ lo mejor · ⚠️ qué mejorar · 💡 cómo decirlo mejor</b>.</li>
+      <li>La versión mejorada usa <b>solo tus hechos reales</b>.</li>
+      <li>Señala los <b>logros que infravaloraste</b> para combatir el síndrome del impostor.</li>
+      <li>Te lo dice <b>en voz alta</b> y en el chat, en el idioma de tu respuesta.</li>
+      <li>Tras el feedback, el entrevistador sigue con la siguiente pregunta.</li>
+    </ul>
+    <div class="io"><b>Entra:</b> pregunta + tu respuesta · <b>Sale:</b> ✅ ⚠️ 💡</div>
+    <div class="files">practice.ts (FEEDBACK_SYSTEM)</div>
+  </section>
+
+</div>
+
+<!-- ============ FLUJOS ============ -->
+<h2>Cómo trabajan juntos</h2>
+<div class="flows">
+  <div class="flow c-violet">
+    <h3>💭 Entrevista real (modo en vivo)</h3>
+    <ol>
+      <li>El <b>Oído</b> oye al entrevistador y lo transcribe.</li>
+      <li>El <b>Orquestador</b> espera a que termine la pregunta.</li>
+      <li>El <b>Bibliotecario</b> aporta tu perfil y tus repos.</li>
+      <li>El <b>Copiloto</b> pide a <b>Claude</b> las viñetas.</li>
+      <li>Las ves en el chat mientras tú respondes con tus palabras.</li>
+    </ol>
+  </div>
+  <div class="flow c-orange">
+    <h3>🎯 Entrenamiento (modo simulacro)</h3>
+    <ol>
+      <li>Eliges puesto, tipo y nivel.</li>
+      <li>El <b>Entrevistador</b> pregunta hablando.</li>
+      <li>Tú respondes; el <b>Oído</b> te transcribe (el audio del bot se ignora).</li>
+      <li>Tras tu pausa, el <b>Coach</b> te da ✅ ⚠️ 💡 en voz alta.</li>
+      <li>El <b>Entrevistador</b> repregunta o cambia de tema. Repites con otro puesto.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="note">
+  <b>Estado actual:</b> el código compila y pasa 26 tests automáticos (interfaz, lógica de los bots, Claude vía CLI y GitHub). Pendiente de validar en tu PC con Windows: Whisper real, captura del audio del sistema y la voz del bot.
+</div>
+
+<footer>Interviewer Max · Electron + TypeScript · Claude (API o Claude Code) · Whisper local / Deepgram</footer>
+</div>
+</body>
+</html>
