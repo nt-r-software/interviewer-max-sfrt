@@ -1,0 +1,180 @@
+<title>Maqueta Interviewer Max</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Concepto: escritorio durante una videollamada genérica; la ventana de la app flota a la derecha. Tema oscuro a propósito (la app lo es). */
+:root {
+  --bg: #0e0f16; --stage: #161826; --tile: #202337; --line: #2b2f48; --text: #eceefa; --muted: #9aa0be;
+  --app: #14141b; --app-bar: #1c1c26; --app-line: #2a2a3a; --accent: #5b6cff; --ok: #3ddc84; --bad: #ff6b6b;
+  --them: #262636; --me: #1f3a2e; --ai: #2a2450; --ai-line: #5b4fd1; --bot: #3a2f12; --bot-line: #8a6d1f;
+  --fb: #12332f; --fb-line: #2f8f7f; --stat: #20253a; --stat-line: #5865a8; --warn: #ffb43b;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 "Segoe UI", system-ui, sans-serif;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; }
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1 { font-size: clamp(20px, 3.4vw, 28px); margin: 0 0 4px; letter-spacing: -.01em; }
+.sub { color: var(--muted); margin: 0 0 14px; max-width: 70ch; }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.tabs button { background: var(--tile); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font: inherit; cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tabs button:focus-visible, .ctl:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
+
+.desk { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 14px; align-items: start; }
+@media (max-width: 860px) { .desk { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- Videollamada genérica ---- */
+.call { background: var(--stage); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; min-height: 560px; }
+.call-top { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.call-top b { color: var(--text); }
+.rec { display: inline-flex; align-items: center; gap: 6px; color: var(--bad); margin-left: auto; }
+.rec::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+.stage { flex: 1; position: relative; padding: 14px; display: grid; place-items: center; }
+.main-tile { width: 100%; max-width: 640px; aspect-ratio: 16 / 10; background: linear-gradient(160deg, #2a3150, #1a1e33); border-radius: 12px; display: grid; place-items: center; position: relative; border: 2px solid var(--ok); }
+.avatar { width: clamp(70px, 14vw, 110px); aspect-ratio: 1; border-radius: 50%; background: #7a5af8; display: grid; place-items: center; font-size: clamp(26px, 5vw, 40px); font-weight: 700; }
+.name { position: absolute; left: 12px; top: 10px; background: rgba(0,0,0,.55); border-radius: 6px; padding: 3px 9px; font-size: 12px; }
+.speaking { position: absolute; right: 12px; top: 10px; font-size: 12px; color: var(--ok); display: flex; gap: 6px; align-items: center; }
+.speaking i { display: inline-block; width: 3px; background: var(--ok); border-radius: 2px; animation: eq 1s infinite ease-in-out; }
+.speaking i:nth-child(1) { height: 8px; } .speaking i:nth-child(2) { height: 14px; animation-delay: .2s; } .speaking i:nth-child(3) { height: 10px; animation-delay: .4s; }
+@keyframes eq { 50% { transform: scaleY(.4); } }
+@media (prefers-reduced-motion: reduce) { .speaking i { animation: none; } }
+.self { position: absolute; right: 22px; bottom: 22px; width: 150px; aspect-ratio: 16 / 10; background: var(--tile); border: 1px solid var(--line); border-radius: 10px; display: grid; place-items: center; font-size: 12px; color: var(--muted); }
+.self .avatar { width: 38px; font-size: 15px; background: #2f9e44; color: #fff; }
+.captions { position: absolute; left: 50%; transform: translateX(-50%); bottom: 18px; width: min(560px, calc(100% - 200px)); background: rgba(0,0,0,.7); border-radius: 8px; padding: 8px 12px; font-size: 13px; text-align: center; }
+@media (max-width: 560px) { .captions { width: calc(100% - 28px); bottom: 100px; } .self { width: 110px; } }
+.bar { display: flex; justify-content: center; gap: 10px; padding: 12px; border-top: 1px solid var(--line); }
+.ctl { width: 42px; height: 42px; border-radius: 50%; border: 0; background: var(--tile); color: var(--text); display: grid; place-items: center; font-size: 17px; cursor: default; }
+.ctl.leave { background: #d13438; width: 64px; border-radius: 21px; }
+
+/* ---- Ventana Interviewer Max (réplica de la real) ---- */
+.app { background: var(--app); border: 1px solid #3a3d5c; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; height: 600px; box-shadow: 0 18px 50px rgba(0,0,0,.55); }
+.titlebar { background: #0a0a10; color: var(--muted); font-size: 12px; padding: 6px 10px; display: flex; justify-content: space-between; }
+.ahead { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--app-bar); border-bottom: 1px solid var(--app-line); font-size: 13px; flex-wrap: wrap; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.muted { color: var(--muted); font-size: 11.5px; }
+.sp { flex: 1; }
+.abtn { background: #2b2b3b; color: var(--text); border: 0; border-radius: 6px; padding: 4px 9px; font-size: 12px; }
+.log { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.msg { max-width: 92%; padding: 7px 11px; border-radius: 10px; font-size: 13.5px; }
+.who { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; opacity: .65; margin-bottom: 2px; }
+.msg.them { align-self: flex-start; background: var(--them); }
+.msg.me { align-self: flex-end; background: var(--me); }
+.msg.ai { align-self: stretch; max-width: 100%; background: var(--ai); border: 1px solid var(--ai-line); font-size: 14px; }
+.msg.bot { align-self: flex-start; background: var(--bot); border: 1px solid var(--bot-line); }
+.msg.fb { align-self: stretch; max-width: 100%; background: var(--fb); border: 1px solid var(--fb-line); }
+.msg.stat { align-self: stretch; max-width: 100%; background: var(--stat); border: 1px solid var(--stat-line); }
+.msg.sum { align-self: stretch; max-width: 100%; background: #1a2a45; border: 1px solid #3b6fc4; }
+.msg ul { margin: 2px 0 0; padding-left: 18px; } .msg li { margin: 2px 0; }
+.ask { margin-top: 6px; color: var(--warn); font-size: 12.5px; }
+.msg table { width: 100%; border-collapse: collapse; font-size: 12px; } .msg td { padding: 1px 6px 1px 0; vertical-align: top; } .msg td:first-child { color: #a8b0d8; white-space: nowrap; }
+[hidden] { display: none !important; }
+.pbar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #2a2210; border-top: 1px solid #6b5a1e; font-size: 12px; }
+.afoot { display: flex; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--app-line); background: var(--app-bar); }
+.afoot .in { flex: 1; background: #20202a; border: 1px solid #33334a; color: var(--muted); border-radius: 6px; padding: 6px 9px; font-size: 12.5px; }
+.finish { background: #2f9e44; color: #fff; text-align: center; padding: 11px; font-weight: 600; font-size: 14px; }
+.note { color: var(--muted); font-size: 12.5px; margin-top: 12px; max-width: 90ch; }
+</style>
+
+<div class="wrap">
+  <h1>Así quedaría en una videollamada</h1>
+  <p class="sub">Maqueta con datos de ejemplo. La ventana de la derecha es una réplica de la app real: flota sobre la llamada, la oyes y la ves solo tú. Cambia de escena para ver cada modo.</p>
+
+  <div class="tabs" role="group" aria-label="Escena">
+    <button data-s="live" aria-pressed="true">💭 Entrevista real</button>
+    <button data-s="bridge" aria-pressed="false">🌉 Pregunta que no he hecho</button>
+    <button data-s="practice" aria-pressed="false">🎯 Simulacro</button>
+    <button data-s="done" aria-pressed="false">✔ Acabado</button>
+  </div>
+
+  <div class="desk">
+    <section class="call" aria-label="Videollamada de ejemplo">
+      <div class="call-top"><b>Entrevista · Ingeniería de plataforma</b><span>· 14:32</span><span class="rec">Grabando</span></div>
+      <div class="stage">
+        <div class="main-tile">
+          <div class="avatar">LM</div>
+          <div class="name">Laura M. · Tech Lead</div>
+          <div class="speaking" id="spk"><i></i><i></i><i></i> habla</div>
+        </div>
+        <div class="captions" id="cap"></div>
+        <div class="self"><div class="avatar">TÚ</div></div>
+      </div>
+      <div class="bar" aria-hidden="true">
+        <span class="ctl">🎙</span><span class="ctl">📷</span><span class="ctl">🖥</span><span class="ctl">💬</span><span class="ctl leave">📞</span>
+      </div>
+    </section>
+
+    <aside class="app" aria-label="Ventana de Interviewer Max">
+      <div class="titlebar"><span>Interviewer Max</span><span>—  ▢  ✕</span></div>
+      <div class="ahead">
+        <span class="dot"></span><b>Interviewer Max</b><span class="muted" id="st">escuchando 🟢</span>
+        <span class="sp"></span>
+        <span class="muted" id="rate">Claude · 5 h: 14% · semana: 56%</span>
+      </div>
+      <div class="ahead" style="border-top:0;padding-top:0;gap:6px"><span class="sp"></span><span class="abtn">📊 Panel</span><span class="abtn">🎯 Simulacro</span><span class="abtn">■ Parar</span><span class="abtn">⚙</span></div>
+      <div class="log" id="log"></div>
+      <div class="pbar" id="pbar" hidden><span class="muted">Simulacro activo — responde en voz alta</span><span class="sp"></span><span class="abtn">Terminé</span><span class="abtn">Saltar</span><span class="abtn">Terminar</span></div>
+      <div class="afoot"><div class="in">Escribe una pregunta y Enter…</div><span class="abtn">Responder ya</span></div>
+      <div class="finish">✔ Acabado</div>
+    </aside>
+  </div>
+
+  <p class="note">Datos de ejemplo. En la app real el audio del entrevistador se transcribe en tu PC (Whisper) y Claude responde con tu sesión de Claude Code: sin API key. Los porcentajes de la cabecera son los de tu límite de Claude.</p>
+</div>
+
+<script>
+var SC = {
+  live: {
+    cap: "«¿Cómo harías un despliegue sin caída de un servicio crítico de pagos?»",
+    st: "escuchando 🟢", pbar: false,
+    log: [
+      ["them", "Entrevistador", "¿Cómo harías un despliegue sin caída de un servicio crítico de pagos?"],
+      ["ai", "💭 Claude", "<ul><li>Blue-green con <b>health checks</b> y corte gradual (canary 5 → 25 → 100 %).</li><li>Migraciones compatibles hacia atrás: <b>expand / contract</b>.</li><li>Rollback automático por error-rate y latencia p99.</li><li>Ejemplo de tu perfil: tu último despliegue en producción.</li></ul>"],
+      ["me", "Tú", "Lo haría con blue-green y un canary…"]
+    ]
+  },
+  bridge: {
+    cap: "«¿Has trabajado con Kubernetes operators en producción?»",
+    st: "escuchando 🟢", pbar: false,
+    log: [
+      ["them", "Entrevistador", "¿Has trabajado con Kubernetes operators en producción?"],
+      ["ai", "💭 Claude", "<ul><li>«No he escrito uno en producción, pero en <b>[proyecto real de tu perfil]</b> automaticé despliegues parecidos.»</li><li>Lo abordaría con <b>CRD + reconciliation loop</b> (idempotente, con finalizers).</li><li>Cuidaría el <b>leader election</b> y los límites de reintentos.</li></ul><div class='ask'>❓ ¿Has tocado algo parecido en alguno de tus proyectos de infraestructura? Si es así, dilo y lo añado a tu perfil.</div>"]
+    ]
+  },
+  practice: {
+    cap: "Simulacro · el bot pregunta en voz alta",
+    st: "escuchando 🟢", pbar: true,
+    log: [
+      ["bot", "🤖 Bot entrevistador", "Cuéntame un incidente en producción que lideraste: ¿qué pasó y qué cambiaste después?"],
+      ["me", "Tú", "Tuvimos una caída por un pool de conexiones agotado. Lo diagnostiqué con las métricas y…"],
+      ["fb", "📝 Feedback", "<b>✅</b> Buena estructura y diagnóstico claro.<br><b>⚠️</b> Falta el resultado medible (tiempo de recuperación, impacto).<br><b>💡</b> «Redujimos el tiempo de recuperación de 40 a 8 minutos con alertas y un límite de pool.» (solo si es real)"]
+    ]
+  },
+  done: {
+    cap: "Llamada terminada",
+    st: "en pausa", pbar: false,
+    log: [
+      ["sum", "📚 Resumen de la sesión", "<b>Fortalezas:</b> diagnóstico técnico y claridad.<br><b>A mejorar:</b> cerrar con resultados medibles.<br><b>Huecos:</b> Kubernetes operators → ¿lo has tocado en algún proyecto real?<br><b>Siguiente práctica:</b> preguntas de fiabilidad (SRE)."],
+      ["stat", "📊 Estadísticas de la sesión", "<table><tr><td>⏱ Duración</td><td>32 min</td></tr><tr><td>❓ Preguntas</td><td>9 · 8 respondidas</td></tr><tr><td>🤖 Llamadas a Claude</td><td>19 · 2,1 s de media</td></tr><tr><td>🔤 Tokens</td><td>41.200 entrada · 3.100 salida</td></tr><tr><td>💶 Equivalente API</td><td>≈ $0,84 (no se cobra)</td></tr><tr><td>📊 Tu límite de 5 h</td><td>21 %</td></tr><tr><td>📅 Tu límite semanal</td><td>58 %</td></tr></table>"]
+    ]
+  }
+};
+var log = document.getElementById("log");
+function show(key) {
+  var s = SC[key];
+  document.getElementById("cap").textContent = s.cap;
+  document.getElementById("st").textContent = s.st;
+  document.getElementById("pbar").hidden = !s.pbar;
+  document.getElementById("spk").style.visibility = key === "done" ? "hidden" : "visible";
+  document.getElementById("rate").textContent = key === "done" ? "Claude · 5 h: 21 % · semana: 58 %" : "Claude · 5 h: 14% · semana: 56%";
+  log.textContent = "";
+  s.log.forEach(function (m) {
+    var d = document.createElement("div"); d.className = "msg " + m[0];
+    var w = document.createElement("div"); w.className = "who"; w.textContent = m[1];
+    var b = document.createElement("div"); b.innerHTML = m[2];
+    d.appendChild(w); d.appendChild(b); log.appendChild(d);
+  });
+  log.scrollTop = log.scrollHeight;
+  document.querySelectorAll(".tabs button").forEach(function (t) { t.setAttribute("aria-pressed", String(t.dataset.s === key)); });
+}
+document.querySelectorAll(".tabs button").forEach(function (t) { t.addEventListener("click", function () { show(t.dataset.s); }); });
+show("live");
+</script>
