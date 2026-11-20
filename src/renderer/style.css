@@ -19,6 +19,16 @@ button:hover { background: #3a3a50; }
 .msg.ai { align-self: stretch; max-width: 100%; background: #2a2450; border: 1px solid #5b4fd1; font-size: 15px; }
 .msg.err { align-self: stretch; background: #3a1f24; color: #ffb4b4; font-size: 12px; }
 .msg.streaming .body::after { content: "▍"; opacity: .6; }
+#picker { padding: 10px 12px; background: #2a2210; border-top: 1px solid #6b5a1e; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
+#picker[hidden] { display: none; }
+#picker label { display: block; margin: 0; font-size: 11px; color: #c9b87a; flex: 1; }
+#picker select, #picker input { width: 100%; margin-top: 2px; padding: 5px 7px; font-size: 12px; background: #20202a; color: inherit; border: 1px solid #33334a; border-radius: 6px; }
+#picker .row { display: flex; gap: 8px; align-items: flex-end; }
+.primary { background: #5b6cff; }
+#pbar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #2a2210; border-top: 1px solid #6b5a1e; font-size: 12px; }
+#pbar[hidden] { display: none; }
+.msg.bot { align-self: flex-start; background: #3a2f12; border: 1px solid #8a6d1f; }
+.msg.fb { align-self: stretch; max-width: 100%; background: #12332e; border: 1px solid #2f8f7f; }
 footer { display: flex; gap: 6px; padding: 8px 12px; border-top: 1px solid #2a2a3a; background: #1c1c26; }
 #manual { flex: 1; background: #20202a; border: 1px solid #33334a; color: inherit; border-radius: 6px; padding: 6px 9px; font-size: 13px; }
 

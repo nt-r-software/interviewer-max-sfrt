@@ -6,6 +6,7 @@ export interface Settings {
   model: string;
   profile: string; // CV, historias STAR, puntos fuertes (escrito por ti)
   githubSummary: string; // generado desde GitHub
+  jobContext: string; // puesto / oferta a la que aplicas (opcional)
   language: "auto" | "es" | "en";
   stt: "local" | "deepgram"; // local = Whisper en tu PC, sin clave
 }
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: Settings = {
   model: "claude-sonnet-5-5",
   profile: "",
   githubSummary: "",
+  jobContext: "",
   language: "auto",
   stt: "local",
 };

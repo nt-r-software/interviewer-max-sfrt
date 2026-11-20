@@ -1,6 +1,6 @@
 declare const api: any;
 
-const ids = ["anthropicKey", "deepgramKey", "model", "language", "stt", "githubUser", "githubToken", "githubSummary", "profile"];
+const ids = ["anthropicKey", "deepgramKey", "model", "language", "stt", "githubUser", "githubToken", "githubSummary", "jobContext", "profile"];
 const el = (id: string) => document.getElementById(id) as HTMLInputElement;
 
 (async () => {

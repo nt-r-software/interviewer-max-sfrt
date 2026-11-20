@@ -18,6 +18,16 @@ npm run dist:win   # genera el .exe (portable + instalador) en release/
 Primer arranque: en Ajustes pon tu usuario de GitHub (importa tus repos) y pega tu perfil/historias.
 No hace falta ninguna clave si tienes Claude Code instalado e iniciado.
 
+## Modo simulacro 🎯
+
+Botón «🎯 Simulacro»: eliges **trabajo** (backend, frontend, DevOps, datos, QA, PM, banca/fintech, soporte… o uno propio), **tipo** (mixta, RR. HH., técnica) y **nivel**. Un bot entrevistador, con tu perfil y tu GitHub:
+
+1. Te hace una pregunta **hablando** (y por escrito).
+2. Escucha tu respuesta (micro) y, cuando haces una pausa o pulsas «Terminé», te da feedback hablado: ✅ lo mejor · ⚠️ qué mejorar · 💡 cómo decirlo mejor con tus hechos reales.
+3. Pasa a la siguiente pregunta, a veces repreguntando sobre lo que dijiste. Puedes saltar, terminar o responder escribiendo.
+
+Para entrenar distintos puestos, repite el simulacro cambiando el trabajo.
+
 ## Atajos
 
 | Atajo | Acción |
@@ -42,5 +52,6 @@ npm test
 ```
 
 - `tests/ui.test.mjs`: interfaz en Chromium real con audio falso (arranque, segmentación por silencios, chat, streaming, errores, ajustes). Whisper y el proceso principal van simulados.
+- `tests/practice.test.mjs`: lógica del bot entrevistador (turnos, feedback, repreguntas, puesto/nivel, errores).
 - `tests/backend.test.mjs`: Claude vía CLI (éxito, fallo, no instalado) e importación de GitHub.
 - No cubren: Whisper real, captura de audio del sistema en Windows ni el overlay de Electron.

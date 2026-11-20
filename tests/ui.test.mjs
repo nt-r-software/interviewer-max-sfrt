@@ -30,7 +30,7 @@ window.api = {
   getSettings: async () => structuredClone(window.__settings),
   importGithub: async (u) => { window.__calls.push(["importGithub", u]); return "Lenguajes: TypeScript\\n- repo-demo"; },
   startListening: rec("startListening"), stopListening: rec("stopListening"), ask: rec("ask"),
-  openSettings: rec("openSettings"), toggleClickThrough: rec("toggleClickThrough"), quit: rec("quit"),
+  openSettings: rec("openSettings"), practiceStart: rec("practiceStart"), practiceStop: rec("practiceStop"), practiceDone: rec("practiceDone"), practiceSkip: rec("practiceSkip"), toggleClickThrough: rec("toggleClickThrough"), quit: rec("quit"),
   on: (ch, cb) => { (window.__handlers[ch] ||= []).push(cb); },
 };
 window.__emit = (ch, ...a) => (window.__handlers[ch] || []).forEach((cb) => cb(...a));
@@ -150,4 +150,62 @@ test("ajustes: carga, importa GitHub y guarda", async () => {
   assert.equal(saved.stt, "deepgram");
   assert.match(saved.githubSummary, /repo-demo/);
   assert.equal(saved.profile, "Mi CV");
+});
+
+test("simulacro: el bot pregunta (hablando), se pausa el micro y se muestra el feedback", async () => {
+  const page = await open("overlay.html");
+  await page.evaluate(() => {
+    window.__spoken = [];
+    window.SpeechSynthesisUtterance = class { constructor(t) { this.text = t; } };
+    Object.defineProperty(window, "speechSynthesis", { configurable: true, value: {
+      cancel() {}, speak(u) { window.__spoken.push(u.text); window.__utter = u; } } });
+  });
+  await page.waitForFunction(() => window.__calls.some((c) => c[0] === "startListening"));
+  await page.evaluate(() => __emit("listening", true));
+  await page.click("#practice");
+  assert.equal(await page.locator("#picker").isVisible(), true);
+  assert.ok((await page.locator("#pjob option").count()) >= 10, "debe haber varios trabajos para entrenar");
+  await page.selectOption("#pjob", "devops");
+  await page.selectOption("#pkind", "tecnica");
+  await page.selectOption("#plevel", "senior");
+  await page.click("#pgo");
+  await page.waitForFunction(() => window.__calls.some((c) => c[0] === "practiceStart"));
+  assert.deepEqual((await calls(page, "practiceStart"))[0][1], { job: "devops", custom: "", kind: "tecnica", level: "senior" });
+  await page.evaluate(() => __emit("practice-state", true));
+  assert.equal(await page.locator("#pbar").isVisible(), true);
+
+  await page.evaluate(() => { __emit("bot-start"); __emit("bot-delta", "¿Por qué "); __emit("bot-delta", "te vas de TSB?"); __emit("bot-end", "¿Por qué te vas de TSB?"); });
+  assert.match(await page.locator(".msg.bot .body").textContent(), /¿Por qué te vas de TSB\?/);
+  assert.deepEqual(await page.evaluate(() => window.__spoken), ["¿Por qué te vas de TSB?"]);
+
+  // Mientras el bot habla no se envían segmentos a Whisper.
+  const before = await page.evaluate(() => window.__asr.length);
+  await page.waitForTimeout(3500);
+  assert.equal(await page.evaluate(() => window.__asr.length), before, "el micro debe estar en pausa mientras habla");
+  await page.evaluate(() => window.__utter.onend()); // el bot termina de hablar
+  await page.waitForTimeout(900);
+
+  await page.evaluate(() => { __emit("fb-start"); __emit("fb-delta", "✅ claro\n⚠️ más datos"); __emit("fb-end"); });
+  assert.match(await page.locator(".msg.fb .body").textContent(), /✅ claro/);
+  const spoken = await page.evaluate(() => window.__spoken);
+  assert.equal(spoken.length, 2, "el bot también dice el feedback en voz");
+  assert.doesNotMatch(spoken[1], /✅|⚠️/);
+
+  await page.click("#pdone");
+  await page.click("#pskip");
+  assert.equal((await calls(page, "practiceDone")).length, 1);
+  assert.equal((await calls(page, "practiceSkip")).length, 1);
+  await page.click("#pend");
+  await page.evaluate(() => __emit("practice-state", false));
+  assert.equal(await page.locator("#pbar").isVisible(), false);
+  assert.deepEqual(page.errors, []);
+});
+
+test("simulacro: lo que escribes cuenta como tu respuesta", async () => {
+  const page = await open("overlay.html");
+  await page.evaluate(() => __emit("practice-state", true));
+  await page.fill("#manual", "Lideré la migración");
+  await page.press("#manual", "Enter");
+  assert.match(await page.locator(".msg.me").last().textContent(), /Lideré la migración/);
+  assert.deepEqual((await calls(page, "ask")).at(-1), ["ask", "Lideré la migración"]);
 });

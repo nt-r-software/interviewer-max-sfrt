@@ -17,6 +17,45 @@ export interface Turn {
   text: string;
 }
 
+export function profileContext(s: Settings): string {
+  return (
+    `# PERFIL DE LA PERSONA\n${s.profile || "(vacío)"}\n\n# RESUMEN DE GITHUB\n${s.githubSummary || "(vacío)"}` +
+    (s.jobContext ? `\n\n# PUESTO / OFERTA A LA QUE APLICA\n${s.jobContext}` : "") +
+    (s.language !== "auto" ? `\n\nIdioma preferido: ${s.language === "es" ? "español" : "inglés"}` : "")
+  );
+}
+
+/** Llamada genérica a Claude (API key si hay; si no, tu sesión de Claude Code). */
+export async function complete(
+  s: Settings,
+  system: string,
+  userMsg: string,
+  onDelta: (t: string) => void,
+  signal: AbortSignal,
+  maxTokens = 400,
+): Promise<void> {
+  const context = profileContext(s);
+
+  // Sin API key: usa tu Claude ya iniciado en este PC mediante Claude Code (`claude -p`).
+  if (!s.anthropicKey) return cliAnswer(s, `${system}\n\n${context}\n\n${userMsg}`, onDelta, signal);
+
+  const client = new Anthropic({ apiKey: s.anthropicKey });
+  const stream = client.messages.stream(
+    {
+      model: s.model || "claude-sonnet-5-5",
+      max_tokens: maxTokens,
+      system: [
+        { type: "text", text: system },
+        { type: "text", text: context, cache_control: { type: "ephemeral" } },
+      ],
+      messages: [{ role: "user", content: userMsg }],
+    },
+    { signal },
+  );
+  stream.on("text", onDelta);
+  await stream.finalMessage();
+}
+
 export async function streamAnswer(
   s: Settings,
   history: Turn[],
@@ -24,41 +63,12 @@ export async function streamAnswer(
   onDelta: (t: string) => void,
   signal: AbortSignal,
 ): Promise<void> {
-
-  const context =
-    `# PERFIL DE LA PERSONA\n${s.profile || "(vacío)"}\n\n# RESUMEN DE GITHUB\n${s.githubSummary || "(vacío)"}` +
-    (s.language !== "auto" ? `\n\nIdioma preferido de respuesta: ${s.language === "es" ? "español" : "inglés"}` : "");
-
   const convo = history
     .slice(-8)
     .map((t) => `${t.speaker === "them" ? "ENTREVISTADOR" : "YO"}: ${t.text}`)
     .join("\n");
-
   const userMsg = `Conversación reciente:\n${convo || "(inicio)"}\n\nPregunta actual del entrevistador:\n${question}\n\nDame las viñetas.`;
-
-  // Sin API key: usa tu Claude ya iniciado en este PC mediante Claude Code (`claude -p`).
-  if (!s.anthropicKey) return cliAnswer(s, `${SYSTEM}\n\n${context}\n\n${userMsg}`, onDelta, signal);
-
-  const client = new Anthropic({ apiKey: s.anthropicKey });
-  const stream = client.messages.stream(
-    {
-      model: s.model || "claude-sonnet-5-5",
-      max_tokens: 400,
-      system: [
-        { type: "text", text: SYSTEM },
-        { type: "text", text: context, cache_control: { type: "ephemeral" } },
-      ],
-      messages: [
-        {
-          role: "user",
-          content: userMsg,
-        },
-      ],
-    },
-    { signal },
-  );
-  stream.on("text", onDelta);
-  await stream.finalMessage();
+  return complete(s, SYSTEM, userMsg, onDelta, signal);
 }
 
 function cliAnswer(s: Settings, prompt: string, onDelta: (t: string) => void, signal: AbortSignal): Promise<void> {

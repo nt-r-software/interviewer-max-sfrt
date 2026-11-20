@@ -11,12 +11,30 @@
     <strong>Interviewer Max</strong>
     <span id="status" class="muted">iniciando…</span>
     <span class="spacer"></span>
+    <button id="practice" title="Simulacro: un bot te entrevista con tu perfil">🎯 Simulacro</button>
     <button id="listen" title="Empezar/parar a escuchar">■ Parar</button>
     <button id="gear" title="Ajustes (Ctrl+Shift+S)">⚙</button>
   </header>
   <main id="log">
     <div class="hint">Escuchando la llamada (audio del sistema) y tu micro. Cuando el entrevistador pregunte, verás aquí 💭 lo que Claude piensa que deberías decir.</div>
   </main>
+  <div id="picker" hidden>
+    <strong>🎯 ¿Qué entrevista quieres entrenar?</strong>
+    <label>Trabajo <select id="pjob"></select></label>
+    <label>…o escribe otro <input id="pcustom" placeholder="Ej: Tech Lead en una startup de pagos" /></label>
+    <div class="row">
+      <label>Tipo <select id="pkind"></select></label>
+      <label>Nivel <select id="plevel"></select></label>
+    </div>
+    <div class="row"><button id="pgo" class="primary">Empezar simulacro</button><button id="pcancel">Cancelar</button></div>
+  </div>
+  <div id="pbar" hidden>
+    <span class="muted">Simulacro activo — responde en voz alta</span>
+    <span class="spacer"></span>
+    <button id="pdone">Terminé</button>
+    <button id="pskip">Saltar</button>
+    <button id="pend">Terminar simulacro</button>
+  </div>
   <footer>
     <input id="manual" placeholder="Escribe una pregunta y Enter (o pulsa «Responder ya»)…" />
     <button id="now" title="Ctrl+Shift+Espacio">Responder ya</button>

@@ -1,3 +1,4 @@
+import { JOBS, KINDS, LEVELS } from "../jobs";
 declare const api: any;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -13,10 +14,13 @@ let streams: MediaStream[] = [];
 let ctx: AudioContext | null = null;
 let worker: Worker | null = null;
 let ready = false;
+let speaking = false; // el bot está hablando: no captamos audio para no oírlo a él mismo
+let practicing = false;
+let queued = 0; // frases pendientes de la voz del bot
 
 // ---------- Chat ----------
 
-type Kind = "them" | "me" | "ai" | "err";
+type Kind = "them" | "me" | "ai" | "bot" | "fb" | "err";
 let current: HTMLElement | null = null; // burbuja de IA en curso
 const last: Record<string, { el: HTMLElement; t: number } | undefined> = {};
 
@@ -25,7 +29,7 @@ function bubble(kind: Kind, text: string): HTMLElement {
   el.className = "msg " + kind;
   const label = document.createElement("div");
   label.className = "who";
-  label.textContent = { them: "Entrevistador", me: "Tú", ai: "💭 Claude", err: "Aviso" }[kind];
+  label.textContent = { them: "Entrevistador", me: "Tú", ai: "💭 Claude", bot: "🤖 Bot entrevistador", fb: "📝 Feedback", err: "Aviso" }[kind];
   const body = document.createElement("div");
   body.className = "body";
   body.textContent = text;
@@ -90,6 +94,7 @@ function pipe(stream: MediaStream, speaker: "them" | "me", audioCtx: AudioContex
   const ratio = audioCtx.sampleRate / 16000;
   const seg = new Segmenter((audio) => worker?.postMessage({ type: "asr", speaker, audio, language }, [audio.buffer]));
   proc.onaudioprocess = (e) => {
+    if (speaking) return;
     const input = e.inputBuffer.getChannelData(0);
     const outLen = Math.floor(input.length / ratio);
     const f32 = new Float32Array(outLen);
@@ -174,7 +179,7 @@ $("now").onclick = () => api.ask("");
 $("manual").addEventListener("keydown", (e) => {
   const el = e.target as HTMLInputElement;
   if (e.key === "Enter" && el.value.trim()) {
-    addSpeech("them", el.value.trim());
+    addSpeech(practicing ? "me" : "them", el.value.trim());
     api.ask(el.value);
     el.value = "";
   }
@@ -190,6 +195,69 @@ api.on("listening", (on: boolean) => {
 api.on("transcript", (e: { speaker: "them" | "me"; text: string; final: boolean }) => {
   if (!useLocal && e.final) addSpeech(e.speaker, e.text);
 });
+function startStream(kind: Kind) {
+  current = bubble(kind, "…");
+  current.parentElement!.classList.add("streaming");
+  current.textContent = "";
+}
+
+function speak(text: string) {
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    const u = new SpeechSynthesisUtterance(text);
+    const isEn = language === "en" || (language === "auto" && !/[¿¡áéíóúñ]|\b(el|la|los|de|que|tu|una?|con|para)\b/i.test(text));
+    u.lang = isEn ? "en-US" : "es-ES";
+    queued++;
+    speaking = true;
+    u.onend = u.onerror = () => setTimeout(() => { if (--queued <= 0) { queued = 0; speaking = false; } }, 600);
+    synth.speak(u);
+  } catch {
+    speaking = false;
+  }
+}
+
+const fill = (id: string, items: { id: string; label: string }[]) => {
+  $<HTMLSelectElement>(id).innerHTML = items.map((i) => `<option value="${i.id}">${i.label}</option>`).join("");
+};
+fill("pjob", JOBS); fill("pkind", KINDS); fill("plevel", LEVELS);
+$<HTMLSelectElement>("plevel").value = "medio";
+
+$("practice").onclick = () => { $("picker").hidden = !$("picker").hidden; };
+$("pcancel").onclick = () => { $("picker").hidden = true; };
+$("pgo").onclick = async () => {
+  if (practicing) return;
+  $("picker").hidden = true;
+  if (!listening) await toggle();
+  api.practiceStart({
+    job: $<HTMLSelectElement>("pjob").value,
+    custom: $<HTMLInputElement>("pcustom").value,
+    kind: $<HTMLSelectElement>("pkind").value,
+    level: $<HTMLSelectElement>("plevel").value,
+  });
+};
+$("pdone").onclick = () => api.practiceDone();
+$("pskip").onclick = () => { try { speechSynthesis.cancel(); } catch {} speaking = false; queued = 0; api.practiceSkip(); };
+$("pend").onclick = () => { try { speechSynthesis.cancel(); } catch {} speaking = false; queued = 0; api.practiceStop(); };
+
+api.on("practice-state", (on: boolean) => {
+  practicing = on;
+  $("pbar").hidden = !on;
+  $("practice").hidden = on;
+  if (!on) { try { speechSynthesis.cancel(); } catch {} speaking = false; }
+});
+api.on("bot-start", () => { current?.parentElement?.remove(); startStream("bot"); });
+api.on("bot-delta", (d: string) => { if (current) { current.textContent += d; log.scrollTop = log.scrollHeight; } });
+api.on("bot-end", (q: string) => { current?.parentElement?.classList.remove("streaming"); current = null; speak(q); });
+api.on("fb-start", () => startStream("fb"));
+api.on("fb-delta", (d: string) => { if (current) { current.textContent += d; log.scrollTop = log.scrollHeight; } });
+api.on("fb-end", () => {
+  const text = current?.textContent ?? "";
+  current?.parentElement?.classList.remove("streaming");
+  current = null;
+  speak(text.replace(/[✅⚠️💡]/gu, "").replace(/\s+/g, " ").trim()); // el bot también te responde en voz
+});
+
 api.on("answer-start", () => {
   current = bubble("ai", "…");
   current.parentElement!.classList.add("streaming");

@@ -1,7 +1,8 @@
 import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, session } from "electron";
 import path from "node:path";
 import { importGithub } from "./github";
-import { streamAnswer, Turn } from "./llm";
+import { complete, streamAnswer, Turn } from "./llm";
+import { Practice } from "./practice";
 import { SttChannel } from "./stt";
 import { loadSettings, saveSettings } from "./store";
 import { Settings, Speaker } from "./types";
@@ -18,6 +19,11 @@ let answerTimer: NodeJS.Timeout | null = null;
 let abort: AbortController | null = null;
 
 const send = (ch: string, ...args: unknown[]) => overlay?.webContents.send(ch, ...args);
+
+const practice = new Practice({
+  complete: (system, user, onDelta, signal) => complete(settings, system, user, onDelta, signal),
+  emit: send,
+});
 
 function createOverlay(): void {
   const { workArea } = screen.getPrimaryDisplay();
@@ -77,6 +83,11 @@ async function answer(question: string): Promise<void> {
 
 function onTranscript(e: { speaker: Speaker; text: string; final: boolean; speechFinal: boolean }): void {
   send("transcript", e);
+  if (practice.active) {
+    // En el simulacro solo cuenta lo que dices tú; el audio del sistema es la voz del bot.
+    if (e.speaker === "me" && e.final) practice.hearMe(e.text);
+    return;
+  }
   if (e.speaker === "me") {
     if (e.final) history.push({ speaker: "me", text: e.text });
     return;
@@ -128,7 +139,19 @@ ipcMain.on("local-transcript", (_e, speaker: Speaker, text: string) =>
 ipcMain.handle("stt-mode", () => settings.stt);
 ipcMain.on("listen:start", startListening);
 ipcMain.on("listen:stop", stopListening);
+ipcMain.on("practice:start", (_e, opts) => practice.start(opts));
+ipcMain.on("practice:stop", () => practice.stop());
+ipcMain.on("practice:done", () => void practice.finishAnswer());
+ipcMain.on("practice:skip", () => practice.skip());
 ipcMain.on("ask", (_e, q: string) => {
+  if (practice.active) {
+    // Respuesta escrita en el simulacro: se envía directamente.
+    if (q.trim()) {
+      practice.hearMe(q.trim());
+      void practice.finishAnswer();
+    } else void practice.finishAnswer();
+    return;
+  }
   const text = q.trim() || pending || [...history].reverse().find((t) => t.speaker === "them")?.text || "";
   if (text) void answer(text);
 });
