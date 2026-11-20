@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Ajustes</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="settings">
+  <h1>Interviewer Max · Ajustes</h1>
+
+  <h2>Claves (se guardan cifradas en tu equipo)</h2>
+  <label>API key de Anthropic (Claude) <input id="anthropicKey" type="password" placeholder="sk-ant-…" /></label>
+  <label>API key de Deepgram (transcripción en vivo) <input id="deepgramKey" type="password" /></label>
+  <label>Modelo <input id="model" /></label>
+  <label>Idioma
+    <select id="language">
+      <option value="auto">Automático (español + inglés)</option>
+      <option value="es">Español</option>
+      <option value="en">English</option>
+    </select>
+  </label>
+
+  <h2>GitHub</h2>
+  <label>Usuario <input id="githubUser" /></label>
+  <label>Token (opcional, para repos privados) <input id="githubToken" type="password" /></label>
+  <button id="import">Importar mis repos</button> <span id="importStatus"></span>
+  <label>Resumen importado (editable) <textarea id="githubSummary" rows="7"></textarea></label>
+
+  <h2>Mi perfil</h2>
+  <p class="muted">Pega tu CV, logros, proyectos, y 5-8 historias con situación → acción → resultado. Cuanto más real y concreto, mejores respuestas. También puedes pegar aquí el resumen de lo que Claude/ChatGPT saben de ti.</p>
+  <textarea id="profile" rows="14" placeholder="Ej: 4 años en TSB como … Proyecto X: reduje el tiempo de … un 40 %…"></textarea>
+
+  <div class="actions"><button id="save" class="primary">Guardar</button> <span id="saved"></span></div>
+  <script src="settings.js"></script>
+</body>
+</html>

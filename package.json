@@ -1,0 +1,33 @@
+{
+  "name": "interviewer-max",
+  "version": "0.1.0",
+  "description": "Copiloto de entrevistas: overlay que escucha la entrevista y te sugiere respuestas breves basadas en tu perfil y tu GitHub.",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/build-renderer.mjs",
+    "start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.40.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.12",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  },
+  "build": {
+    "appId": "com.interviewermax.app",
+    "productName": "Interviewer Max",
+    "files": ["dist/**/*", "package.json"],
+    "win": { "target": ["portable", "nsis"] },
+    "mac": { "target": ["dmg"] },
+    "linux": { "target": ["AppImage"] }
+  }
+}
