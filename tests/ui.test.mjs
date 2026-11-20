@@ -298,3 +298,56 @@ test("ajustes: sin API key de Anthropic y con Supabase opcional", async () => {
   const saved = (await calls(page, "saveSettings"))[0][1];
   assert.equal(saved.supabaseKey, "SECRETO");
 });
+
+test("forma de la maqueta: cabecera en dos filas con los botones en la segunda", async () => {
+  const page = await open("overlay.html");
+  const rows = await page.evaluate(() => [...document.querySelectorAll("header .hrow")].map((r) => [...r.children].map((c) => c.id || c.tagName)));
+  assert.equal(rows.length, 2);
+  assert.ok(rows[0].includes("dot") && rows[0].includes("status") && rows[0].includes("rate"));
+  assert.deepEqual(rows[1], ["dash", "practice", "listen", "gear"]);
+  const y = await page.evaluate(() => ["status", "dash"].map((id) => document.getElementById(id).getBoundingClientRect().top));
+  assert.ok(y[1] > y[0], "los botones quedan debajo del título");
+});
+
+test("las respuestas de Claude se ven con viñetas, negritas y la línea ❓ destacada", async () => {
+  const page = await open("overlay.html");
+  const text = "• Usa **CRD + reconciliation loop** (idempotente)\n• Cuida el **leader election**\n❓ ¿Has tocado algo parecido en tus proyectos?";
+  await page.evaluate((t) => { __emit("answer-start", "q"); for (const c of t.match(/.{1,5}/gs)) __emit("answer-delta", c); __emit("answer-end"); }, text);
+  assert.equal(await page.locator(".msg.ai li").count(), 2);
+  assert.deepEqual(await page.locator(".msg.ai strong").allTextContents(), ["CRD + reconciliation loop", "leader election"]);
+  assert.match(await page.locator(".msg.ai .ask").textContent(), /^❓ ¿Has tocado algo parecido/);
+  const body = await page.locator(".msg.ai .body").textContent();
+  assert.doesNotMatch(body, /\*\*|•/, "no deben verse los símbolos de formato");
+  const color = await page.locator(".msg.ai .ask").evaluate((e) => getComputedStyle(e).color);
+  assert.equal(color, "rgb(255, 180, 59)");
+});
+
+test("el formato no permite inyectar HTML desde el texto de la IA", async () => {
+  const page = await open("overlay.html");
+  await page.evaluate(() => {
+    window.__pwned = false;
+    __emit("answer-start", "q");
+    __emit("answer-delta", "• <img src=x onerror=\"window.__pwned=true\"> y **<b>negrita</b>**\n<script>window.__pwned=true</script>");
+    __emit("answer-end");
+  });
+  await page.waitForTimeout(200);
+  assert.equal(await page.evaluate(() => window.__pwned), false);
+  assert.equal(await page.locator(".msg.ai img, .msg.ai script, .msg.ai b").count(), 0);
+  assert.match(await page.locator(".msg.ai .body").textContent(), /<img src=x/);
+});
+
+test("el feedback y el resumen también usan el formato; el feedback hablado no lleva símbolos", async () => {
+  const page = await open("overlay.html");
+  await page.evaluate(() => {
+    window.__spoken = [];
+    window.SpeechSynthesisUtterance = class { constructor(t) { this.text = t; } };
+    Object.defineProperty(window, "speechSynthesis", { configurable: true, value: { cancel() {}, speak(u) { window.__spoken.push(u.text); } } });
+    __emit("fb-start"); __emit("fb-delta", "✅ Buena estructura\n⚠️ Falta el **resultado medible**\n💡 Dilo con cifras"); __emit("fb-end");
+    __emit("session-summary", "**Fortalezas:** claridad\n**Huecos:** Kubernetes", "/x.md");
+  });
+  assert.equal(await page.locator(".msg.fb .body > div").count(), 3);
+  assert.deepEqual(await page.locator(".msg.fb strong").allTextContents(), ["resultado medible"]);
+  assert.deepEqual(await page.locator(".msg.sum strong").allTextContents(), ["Fortalezas:", "Huecos:"]);
+  const said = (await page.evaluate(() => window.__spoken))[0];
+  assert.equal(said, "Buena estructura Falta el resultado medible Dilo con cifras", "sin emojis ni asteriscos");
+});

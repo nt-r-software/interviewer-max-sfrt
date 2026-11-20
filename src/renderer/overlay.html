@@ -7,15 +7,19 @@
 </head>
 <body class="chat">
   <header>
-    <span id="dot"></span>
-    <strong>Interviewer Max</strong>
-    <span id="status" class="muted">iniciando…</span>
-    <span class="spacer"></span>
-    <span id="rate" class="muted" title="Cuánto llevas gastado de tu límite de Claude"></span>
-    <button id="dash" title="Panel de entrenamiento">📊 Panel</button>
-    <button id="practice" title="Simulacro: un bot te entrevista con tu perfil">🎯 Simulacro</button>
-    <button id="listen" title="Empezar/parar a escuchar">■ Parar</button>
-    <button id="gear" title="Ajustes (Ctrl+Shift+S)">⚙</button>
+    <div class="hrow">
+      <span id="dot"></span>
+      <strong>Interviewer Max</strong>
+      <span id="status" class="muted">iniciando…</span>
+      <span class="spacer"></span>
+      <span id="rate" class="muted" title="Cuánto llevas gastado de tu límite de Claude"></span>
+    </div>
+    <div class="hrow right">
+      <button id="dash" title="Panel de entrenamiento">📊 Panel</button>
+      <button id="practice" title="Simulacro: un bot te entrevista con tu perfil">🎯 Simulacro</button>
+      <button id="listen" title="Empezar/parar a escuchar">■ Parar</button>
+      <button id="gear" title="Ajustes (Ctrl+Shift+S)">⚙</button>
+    </div>
   </header>
   <main id="log">
     <div class="hint">Escuchando la llamada (audio del sistema) y tu micro. Cuando el entrevistador pregunte, verás aquí 💭 lo que Claude piensa que deberías decir.</div>
@@ -35,10 +39,10 @@
     <span class="spacer"></span>
     <button id="pdone">Terminé</button>
     <button id="pskip">Saltar</button>
-    <button id="pend">Terminar simulacro</button>
+    <button id="pend">Terminar</button>
   </div>
   <footer>
-    <input id="manual" placeholder="Escribe una pregunta y Enter (o pulsa «Responder ya»)…" />
+    <input id="manual" placeholder="Escribe una pregunta y Enter…" />
     <button id="now" title="Ctrl+Shift+Espacio">Responder ya</button>
   </footer>
   <button id="finish" title="Guarda y resume la sesión, saca estadísticas y entrena a los bots">✔ Acabado</button>

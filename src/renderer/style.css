@@ -3,7 +3,14 @@ body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; }
 
 /* ---- Chat ---- */
 body.chat { display: flex; flex-direction: column; height: 100vh; background: #14141b; color: #f2f2f5; overflow: hidden; }
-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #1c1c26; border-bottom: 1px solid #2a2a3a; font-size: 13px; }
+header { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; background: #1c1c26; border-bottom: 1px solid #2a2a3a; font-size: 13px; }
+.hrow { display: flex; align-items: center; gap: 8px; }
+.hrow.right { justify-content: flex-end; }
+.msg .body ul { margin: 2px 0 0; padding-left: 18px; }
+.msg .body li { margin: 2px 0; }
+.msg .body strong { font-weight: 700; }
+.msg .body .ask { margin-top: 6px; color: #ffb43b; font-size: 12.5px; }
+
 .spacer { flex: 1; }
 #dot { width: 9px; height: 9px; border-radius: 50%; background: #666; }
 #dot.on { background: #3ddc84; box-shadow: 0 0 6px #3ddc84; }
@@ -13,7 +20,7 @@ button:hover { background: #3a3a50; }
 .hint, .muted { color: #8a8fa3; font-size: 12px; }
 .msg { max-width: 92%; padding: 7px 11px; border-radius: 10px; font-size: 14px; line-height: 1.4; }
 .msg .who { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; opacity: .6; margin-bottom: 2px; }
-.msg .body { white-space: pre-wrap; }
+.msg .body { white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg.them { align-self: flex-start; background: #262636; }
 .msg.me { align-self: flex-end; background: #1f3a2e; }
 .msg.ai { align-self: stretch; max-width: 100%; background: #2a2450; border: 1px solid #5b4fd1; font-size: 15px; }

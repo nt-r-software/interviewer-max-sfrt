@@ -1,5 +1,6 @@
 import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, session } from "electron";
 import path from "node:path";
+import { clampBounds, loadBounds, MIN_SIZE, saveBounds } from "./bounds";
 import { importGithub } from "./github";
 import { complete, setTelemetry, streamAnswer, Turn } from "./llm";
 import { Practice } from "./practice";
@@ -68,18 +69,30 @@ const practice = new Practice({
 });
 
 function createOverlay(): void {
-  const { workArea } = screen.getPrimaryDisplay();
+  const boundsFile = path.join(app.getPath("userData"), "window.json");
+  const b = clampBounds(
+    loadBounds(boundsFile),
+    screen.getAllDisplays().map((d) => d.workArea),
+    screen.getPrimaryDisplay().workArea,
+  );
   overlay = new BrowserWindow({
-    width: 440,
-    height: 600,
-    x: workArea.x + workArea.width - 440 - 20,
-    y: workArea.y + 20,
+    ...b,
+    minWidth: MIN_SIZE.width,
+    minHeight: MIN_SIZE.height,
     title: "Interviewer Max",
     backgroundColor: "#14141b",
     autoHideMenuBar: true,
     alwaysOnTop: true,
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true },
   });
+  // Recuerda dónde la dejaste (se guarda 0,5 s después de moverla o cambiar su tamaño).
+  let t: NodeJS.Timeout | null = null;
+  const persist = () => {
+    if (t) clearTimeout(t);
+    t = setTimeout(() => overlay && !overlay.isDestroyed() && !overlay.isMinimized() && saveBounds(boundsFile, overlay.getBounds()), 500);
+  };
+  overlay.on("move", persist);
+  overlay.on("resize", persist);
   overlay.setAlwaysOnTop(true, "screen-saver");
   overlay.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   overlay.loadFile(path.join(__dirname, "renderer", "overlay.html"));

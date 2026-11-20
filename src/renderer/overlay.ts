@@ -1,4 +1,5 @@
 import { JOBS, KINDS, LEVELS } from "../jobs";
+import { appendRich, setRich } from "./rich";
 declare const api: any;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -198,7 +199,7 @@ api.on("transcript", (e: { speaker: "them" | "me"; text: string; final: boolean 
 function startStream(kind: Kind) {
   current = bubble(kind, "…");
   current.parentElement!.classList.add("streaming");
-  current.textContent = "";
+  setRich(current, "");
 }
 
 function speak(text: string) {
@@ -249,7 +250,7 @@ api.on("practice-state", (on: boolean) => {
   if (!on) { try { speechSynthesis.cancel(); } catch {} speaking = false; }
 });
 api.on("bot-start", () => { current?.parentElement?.remove(); startStream("bot"); });
-api.on("bot-delta", (d: string) => { if (current) { current.textContent += d; log.scrollTop = log.scrollHeight; } });
+api.on("bot-delta", (d: string) => { if (current) { appendRich(current, d); log.scrollTop = log.scrollHeight; } });
 api.on("bot-end", (q: string) => { current?.parentElement?.classList.remove("streaming"); current = null; speak(q); });
 $("finish").onclick = () => api.endSession();
 $("dash").onclick = () => api.openDashboard();
@@ -286,7 +287,8 @@ api.on("session-stats", (s: any) => {
 api.on("session-status", setStatus);
 api.on("session-summary", (text: string, file: string) => {
   setStatus(listening ? "escuchando 🟢" : "en pausa");
-  const body = bubble("sum", text);
+  const body = bubble("sum", "");
+  setRich(body, text);
   const note = document.createElement("div");
   note.className = "muted";
   note.textContent = "Guardado en: " + file + " · ya está en la memoria de los bots.";
@@ -299,21 +301,21 @@ api.on("session-summary", (text: string, file: string) => {
   log.scrollTop = log.scrollHeight;
 });
 api.on("fb-start", () => startStream("fb"));
-api.on("fb-delta", (d: string) => { if (current) { current.textContent += d; log.scrollTop = log.scrollHeight; } });
+api.on("fb-delta", (d: string) => { if (current) { appendRich(current, d); log.scrollTop = log.scrollHeight; } });
 api.on("fb-end", () => {
-  const text = current?.textContent ?? "";
+  const text = current?.dataset.raw ?? "";
   current?.parentElement?.classList.remove("streaming");
   current = null;
-  speak(text.replace(/[✅⚠️💡]/gu, "").replace(/\s+/g, " ").trim()); // el bot también te responde en voz
+  speak(text.replace(/\*\*/g, "").replace(/[✅⚠️💡]/gu, "").replace(/\s+/g, " ").trim()); // el bot también te responde en voz
 });
 
 api.on("answer-start", () => {
   current = bubble("ai", "…");
   current.parentElement!.classList.add("streaming");
-  current.textContent = "";
+  setRich(current, "");
 });
 api.on("answer-delta", (d: string) => {
-  if (current) { current.textContent += d; log.scrollTop = log.scrollHeight; }
+  if (current) { appendRich(current, d); log.scrollTop = log.scrollHeight; }
 });
 api.on("answer-end", () => { current?.parentElement?.classList.remove("streaming"); current = null; });
 api.on("error", (m: string) => { current?.parentElement?.remove(); current = null; bubble("err", m); });

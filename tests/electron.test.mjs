@@ -118,3 +118,21 @@ test("panel de entrenamiento (ventana real) con las 2 sesiones", { skip }, async
   assert.equal(await dash.locator("details.sess").count(), 2);
   assert.match(await dash.locator("#rate").textContent(), /14% usado/);
 });
+
+test("la ventana real nace arriba a la derecha (440×600) y recuerda dónde la dejas", { skip }, async () => {
+  const info = await app.evaluate(({ BrowserWindow, screen }) => {
+    const w = BrowserWindow.getAllWindows().find((x) => x.getTitle() === "Interviewer Max");
+    return { b: w.getBounds(), work: screen.getPrimaryDisplay().workArea, min: w.getMinimumSize() };
+  });
+  assert.equal(info.b.width, 440);
+  assert.equal(info.b.height, 600);
+  assert.equal(info.b.x, info.work.x + info.work.width - 440 - 20, "pegada a la derecha con 20 px de margen");
+  assert.equal(info.b.y, info.work.y + 20);
+  assert.deepEqual(info.min, [360, 420]);
+
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((x) => x.getTitle() === "Interviewer Max").setBounds({ x: 120, y: 80, width: 500, height: 640 }));
+  const file = path.join(userData, "window.json");
+  for (let i = 0; i < 30 && !existsSync(file); i++) await new Promise((r) => setTimeout(r, 100));
+  await new Promise((r) => setTimeout(r, 700)); // el guardado espera 0,5 s tras el último cambio
+  assert.deepEqual(JSON.parse(readFileSync(file, "utf8")), { x: 120, y: 80, width: 500, height: 640 });
+});

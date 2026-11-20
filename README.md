@@ -12,6 +12,10 @@ Copiloto de entrevistas para Windows / Mac / Linux. Una ventana pequeña tipo ch
 4. **✔ Acabado** (botón abajo): guarda la sesión, la resume, entrena a los bots y te muestra estadísticas, incluido cuánto llevas gastado de tu límite de Claude.
 5. **📊 Panel**: historial, consumo por bot, memoria del agente y todas tus sesiones.
 
+## Cómo se ve
+
+La ventana mide 440×600, nace **arriba a la derecha** (20 px de margen) y recuerda dónde la dejas y su tamaño. Cabecera en dos filas: estado y tu % de Claude arriba, botones debajo. Las sugerencias de Claude se ven con viñetas, negritas y la pregunta ❓ destacada. Hay maquetas en `docs/maquetas/` (videollamada y monitor completo) y el esquema en `docs/arquitectura.html`.
+
 ## Requisitos
 
 - [Claude Code](https://claude.com/claude-code) instalado y con sesión iniciada (`claude` en el PATH).
@@ -74,7 +78,7 @@ npm run test:app                  # app real de Electron, en Linux con xvfb
 ```
 
 - `ui`: interfaz en Chromium real con audio falso (arranque, segmentación por silencios, chat, simulacro, estadísticas, panel, ajustes).
-- `practice`, `sessions`, `usage`, `backend`: lógica del bot, memoria, consumo, historial, Supabase y Claude vía CLI.
+- `bounds`: posición y tamaño de la ventana. `practice`, `sessions`, `usage`, `backend`: lógica del bot, memoria, consumo, historial, Supabase y Claude vía CLI.
 - `electron`: la app empaquetada de verdad, con un `claude` falso.
 - No cubren: Whisper real, captura del audio del sistema en Windows ni la voz del bot. Eso solo se valida en tu PC.
 
