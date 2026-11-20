@@ -17,6 +17,8 @@ button:hover { background: #3a3a50; }
 .msg.them { align-self: flex-start; background: #262636; }
 .msg.me { align-self: flex-end; background: #1f3a2e; }
 .msg.ai { align-self: stretch; max-width: 100%; background: #2a2450; border: 1px solid #5b4fd1; font-size: 15px; }
+.msg.sum { align-self: stretch; max-width: 100%; background: #1a2a45; border: 1px solid #3b6fc4; }
+.msg.sum button { margin-top: 6px; }
 .msg.err { align-self: stretch; background: #3a1f24; color: #ffb4b4; font-size: 12px; }
 .msg.streaming .body::after { content: "▍"; opacity: .6; }
 #picker { padding: 10px 12px; background: #2a2210; border-top: 1px solid #6b5a1e; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }

@@ -20,6 +20,7 @@ export interface Turn {
 export function profileContext(s: Settings): string {
   return (
     `# PERFIL DE LA PERSONA\n${s.profile || "(vacío)"}\n\n# RESUMEN DE GITHUB\n${s.githubSummary || "(vacío)"}` +
+    (s.memory ? `\n\n# APRENDIZAJES DE SESIONES ANTERIORES (úsalos para personalizar)\n${s.memory}` : "") +
     (s.jobContext ? `\n\n# PUESTO / OFERTA A LA QUE APLICA\n${s.jobContext}` : "") +
     (s.language !== "auto" ? `\n\nIdioma preferido: ${s.language === "es" ? "español" : "inglés"}` : "")
   );

@@ -1,8 +1,11 @@
 import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, session } from "electron";
+import fs from "node:fs";
 import path from "node:path";
 import { importGithub } from "./github";
 import { complete, streamAnswer, Turn } from "./llm";
 import { Practice } from "./practice";
+import { saveLog, SessionLog, summarize, updateMemory } from "./sessions";
+import { JOBS } from "./jobs";
 import { SttChannel } from "./stt";
 import { loadSettings, saveSettings } from "./store";
 import { Settings, Speaker } from "./types";
@@ -20,9 +23,36 @@ let abort: AbortController | null = null;
 
 const send = (ch: string, ...args: unknown[]) => overlay?.webContents.send(ch, ...args);
 
+let log = new SessionLog();
+const sessionsDir = () => path.join(app.getPath("userData"), "sessions");
+const llm = (system: string, user: string, onDelta: (t: string) => void, signal: AbortSignal) =>
+  complete(settings, system, user, onDelta, signal);
+
+/** Guarda la sesión, la resume con Claude y suma lo aprendido a la memoria de los bots. */
+async function finalizeSession(): Promise<void> {
+  if (log.isEmpty()) return send("session-status", "No hay nada que resumir todavía");
+  const cur = log;
+  log = new SessionLog();
+  const file = saveLog(sessionsDir(), cur);
+  send("session-status", "resumiendo sesión…");
+  try {
+    const summary = await summarize(llm, cur);
+    settings.memory = await updateMemory(llm, settings.memory, summary);
+    saveSettings(settings);
+    fs.appendFileSync(file, `\n## Resumen\n${summary}\n`);
+    send("session-summary", summary, file);
+  } catch (e: any) {
+    send("error", "No pude resumir la sesión: " + (e?.message ?? e) + ` (el registro quedó en ${file})`);
+  }
+}
+
 const practice = new Practice({
-  complete: (system, user, onDelta, signal) => complete(settings, system, user, onDelta, signal),
-  emit: send,
+  complete: llm,
+  emit: (ch, ...a) => {
+    send(ch, ...a);
+    if (ch === "practice-state" && a[0] === false) void finalizeSession();
+  },
+  record: (e) => log.add(e),
 });
 
 function createOverlay(): void {
@@ -75,6 +105,7 @@ async function answer(question: string): Promise<void> {
       send("answer-delta", d);
     }, ac.signal);
     history.push({ speaker: "them", text: question });
+    log.add({ question, suggestion: full.trim() });
     send("answer-end");
   } catch (e: any) {
     if (!ac.signal.aborted) send("error", e?.message ?? String(e));
@@ -89,7 +120,10 @@ function onTranscript(e: { speaker: Speaker; text: string; final: boolean; speec
     return;
   }
   if (e.speaker === "me") {
-    if (e.final) history.push({ speaker: "me", text: e.text });
+    if (e.final) {
+      history.push({ speaker: "me", text: e.text });
+      log.attachAnswer(e.text);
+    }
     return;
   }
   if (!e.final) return;
@@ -139,7 +173,12 @@ ipcMain.on("local-transcript", (_e, speaker: Speaker, text: string) =>
 ipcMain.handle("stt-mode", () => settings.stt);
 ipcMain.on("listen:start", startListening);
 ipcMain.on("listen:stop", stopListening);
-ipcMain.on("practice:start", (_e, opts) => practice.start(opts));
+ipcMain.on("practice:start", (_e, opts) => {
+  log.mode = "simulacro";
+  log.label = [JOBS.find((j) => j.id === opts?.job)?.label, opts?.custom, opts?.kind, opts?.level].filter(Boolean).join(" · ");
+  practice.start(opts);
+});
+ipcMain.on("session:end", () => void finalizeSession());
 ipcMain.on("practice:stop", () => practice.stop());
 ipcMain.on("practice:done", () => void practice.finishAnswer());
 ipcMain.on("practice:skip", () => practice.skip());

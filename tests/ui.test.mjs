@@ -209,3 +209,29 @@ test("simulacro: lo que escribes cuenta como tu respuesta", async () => {
   assert.match(await page.locator(".msg.me").last().textContent(), /Lideré la migración/);
   assert.deepEqual((await calls(page, "ask")).at(-1), ["ask", "Lideré la migración"]);
 });
+
+test("resumen de sesión: botón, estado, burbuja con ruta y copiar", async () => {
+  const page = await open("overlay.html");
+  await page.evaluate(() => {
+    window.__copied = "";
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (t) => { window.__copied = t; } } });
+    window.api.endSession = () => window.__calls.push(["endSession"]);
+  });
+  await page.click("#endsession");
+  assert.equal((await calls(page, "endSession")).length, 1);
+  await page.evaluate(() => __emit("session-status", "resumiendo sesión…"));
+  assert.equal(await page.locator("#status").textContent(), "resumiendo sesión…");
+  await page.evaluate(() => __emit("session-summary", "**Fortalezas:** claridad", "/ruta/sesion.md"));
+  assert.match(await page.locator(".msg.sum .body").textContent(), /Fortalezas/);
+  assert.match(await page.locator(".msg.sum").textContent(), /\/ruta\/sesion\.md/);
+  await page.click(".msg.sum button");
+  assert.equal(await page.evaluate(() => window.__copied), "**Fortalezas:** claridad");
+});
+
+test("ajustes: la memoria se carga y se guarda", async () => {
+  const page = await open("settings.html", { memory: "### 2026-11-20\nbuen STAR" });
+  await page.waitForFunction(() => document.getElementById("memory").value.includes("buen STAR"));
+  await page.fill("#memory", "### editada");
+  await page.click("#save");
+  assert.equal((await calls(page, "saveSettings"))[0][1].memory, "### editada");
+});

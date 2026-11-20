@@ -22,6 +22,7 @@ export interface PracticeDeps {
   emit: (channel: string, ...args: unknown[]) => void;
   answerPauseMs?: number; // silencio tras el que se da por terminada la respuesta
   nextDelayMs?: number; // pausa entre el feedback y la siguiente pregunta
+  record?: (e: { question: string; answer: string; feedback: string }) => void;
 }
 
 export class Practice {
@@ -74,11 +75,15 @@ export class Practice {
     const ac = (this.abort = new AbortController());
     this.last = { q: this.question, a: answer };
     this.d.emit("fb-start");
+    let fb = "";
     try {
       await this.d.complete(
         FEEDBACK_SYSTEM,
         `${this.focus}\n\nPregunta del entrevistador:\n${this.question}\n\nRespuesta de la persona:\n${answer}`,
-        (t) => gen === this.gen && this.d.emit("fb-delta", t),
+        (t) => {
+          fb += t;
+          if (gen === this.gen) this.d.emit("fb-delta", t);
+        },
         ac.signal,
       );
     } catch (e: any) {
@@ -86,6 +91,7 @@ export class Practice {
       return this.failStop(gen);
     }
     if (gen !== this.gen) return;
+    this.d.record?.({ question: this.question, answer, feedback: fb.trim() });
     this.d.emit("fb-end");
     setTimeout(() => gen === this.gen && this.active && void this.nextQuestion(), this.d.nextDelayMs ?? 1500);
   }

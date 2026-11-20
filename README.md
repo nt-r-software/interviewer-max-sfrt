@@ -28,6 +28,13 @@ Botón «🎯 Simulacro»: eliges **trabajo** (backend, frontend, DevOps, datos,
 
 Para entrenar distintos puestos, repite el simulacro cambiando el trabajo.
 
+## Memoria: los bots aprenden de cada sesión 📚
+
+- Cada entrevista y simulacro se guarda como `.md` (en la carpeta `sessions` de los datos de la app).
+- Al terminar un simulacro, o al pulsar **📚 Resumen**, Claude resume la sesión: fortalezas, qué mejorar, hechos reales nuevos que aportaste y qué practicar después.
+- Ese resumen se suma a la **memoria** (Ajustes → «Memoria de los bots»), que se compacta sola si crece, y todos los bots la usan para personalizar preguntas, sugerencias y feedback.
+- Botón **Copiar resumen** para pegarlo en un chat con Claude; también puedes subir los `.md` a un repo y pedirle que los lea.
+
 ## Atajos
 
 | Atajo | Acción |
@@ -53,5 +60,6 @@ npm test
 
 - `tests/ui.test.mjs`: interfaz en Chromium real con audio falso (arranque, segmentación por silencios, chat, streaming, errores, ajustes). Whisper y el proceso principal van simulados.
 - `tests/practice.test.mjs`: lógica del bot entrevistador (turnos, feedback, repreguntas, puesto/nivel, errores).
+- `tests/sessions.test.mjs`: registro de sesiones, resúmenes y memoria acumulada.
 - `tests/backend.test.mjs`: Claude vía CLI (éxito, fallo, no instalado) e importación de GitHub.
 - No cubren: Whisper real, captura de audio del sistema en Windows ni el overlay de Electron.

@@ -20,7 +20,7 @@ let queued = 0; // frases pendientes de la voz del bot
 
 // ---------- Chat ----------
 
-type Kind = "them" | "me" | "ai" | "bot" | "fb" | "err";
+type Kind = "them" | "me" | "ai" | "bot" | "fb" | "sum" | "err";
 let current: HTMLElement | null = null; // burbuja de IA en curso
 const last: Record<string, { el: HTMLElement; t: number } | undefined> = {};
 
@@ -29,7 +29,7 @@ function bubble(kind: Kind, text: string): HTMLElement {
   el.className = "msg " + kind;
   const label = document.createElement("div");
   label.className = "who";
-  label.textContent = { them: "Entrevistador", me: "Tú", ai: "💭 Claude", bot: "🤖 Bot entrevistador", fb: "📝 Feedback", err: "Aviso" }[kind];
+  label.textContent = { them: "Entrevistador", me: "Tú", ai: "💭 Claude", bot: "🤖 Bot entrevistador", fb: "📝 Feedback", sum: "📚 Resumen de la sesión", err: "Aviso" }[kind];
   const body = document.createElement("div");
   body.className = "body";
   body.textContent = text;
@@ -249,6 +249,22 @@ api.on("practice-state", (on: boolean) => {
 api.on("bot-start", () => { current?.parentElement?.remove(); startStream("bot"); });
 api.on("bot-delta", (d: string) => { if (current) { current.textContent += d; log.scrollTop = log.scrollHeight; } });
 api.on("bot-end", (q: string) => { current?.parentElement?.classList.remove("streaming"); current = null; speak(q); });
+$("endsession").onclick = () => api.endSession();
+api.on("session-status", setStatus);
+api.on("session-summary", (text: string, file: string) => {
+  setStatus(listening ? "escuchando 🟢" : "en pausa");
+  const body = bubble("sum", text);
+  const note = document.createElement("div");
+  note.className = "muted";
+  note.textContent = "Guardado en: " + file + " · ya está en la memoria de los bots.";
+  const copy = document.createElement("button");
+  copy.textContent = "Copiar resumen";
+  copy.onclick = async () => {
+    try { await navigator.clipboard.writeText(text); copy.textContent = "Copiado ✓"; } catch { copy.textContent = "Selecciona y copia a mano"; }
+  };
+  body.parentElement!.append(note, copy);
+  log.scrollTop = log.scrollHeight;
+});
 api.on("fb-start", () => startStream("fb"));
 api.on("fb-delta", (d: string) => { if (current) { current.textContent += d; log.scrollTop = log.scrollHeight; } });
 api.on("fb-end", () => {

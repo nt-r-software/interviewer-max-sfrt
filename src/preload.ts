@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld("api", {
   practiceStop: () => ipcRenderer.send("practice:stop"),
   practiceDone: () => ipcRenderer.send("practice:done"),
   practiceSkip: () => ipcRenderer.send("practice:skip"),
+  endSession: () => ipcRenderer.send("session:end"),
   ask: (q: string) => ipcRenderer.send("ask", q),
   openSettings: () => ipcRenderer.send("open-settings"),
   toggleClickThrough: () => ipcRenderer.send("toggle-click-through"),
