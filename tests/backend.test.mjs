@@ -1,4 +1,4 @@
-// Lógica del proceso principal sin Electron: Claude vía CLI y GitHub.
+// Claude vía CLI (stream-json, medición de consumo) e importación de GitHub.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, writeFileSync, chmodSync } from "node:fs";
@@ -8,41 +8,78 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, "..");
-const { streamAnswer } = require(path.join(root, "dist/llm.js"));
+const { streamAnswer, complete, setTelemetry } = require(path.join(root, "dist/llm.js"));
 const { importGithub } = require(path.join(root, "dist/github.js"));
 
-const settings = { anthropicKey: "", model: "m", profile: "PERFIL-XYZ", githubSummary: "GH-ABC", language: "auto" };
+const settings = { model: "m", profile: "PERFIL-XYZ", githubSummary: "GH-ABC", memory: "MEM-777", jobContext: "", language: "auto" };
 
-function fakeClaude(body) {
+// `claude` falso (script node) que habla el mismo formato stream-json que el real.
+function fakeClaude(mode = "ok") {
   const dir = mkdtempSync(path.join(tmpdir(), "fakeclaude-"));
   const f = path.join(dir, "claude");
-  writeFileSync(f, `#!/bin/sh\n${body}\n`);
+  writeFileSync(f, `#!/usr/bin/env node
+let inp = "";
+process.stdin.on("data", (d) => (inp += d)).on("end", () => {
+  const out = (o) => console.log(JSON.stringify(o));
+  if (${JSON.stringify(mode)} === "exit3") { console.error("no hay sesión"); process.exit(3); }
+  out({ type: "rate_limit_event", rate_limit_info: { unifiedWindows: { five_hour: { utilization: 0.14, resetsAt: 111 }, seven_day: { utilization: 0.56, resetsAt: 222 } } } });
+  if (${JSON.stringify(mode)} === "error") { out({ type: "result", is_error: true, result: "Límite alcanzado" }); process.exit(1); }
+  const text = "ARGS:" + process.argv.slice(2).join(" ") + "|PROMPT:" + inp;
+  out({ type: "stream_event", event: { type: "content_block_delta", delta: { type: "text_delta", text: text.slice(0, 10) } } });
+  out({ type: "stream_event", event: { type: "content_block_delta", delta: { type: "text_delta", text: text.slice(10) } } });
+  out({ type: "result", subtype: "success", is_error: false, result: text, duration_ms: 500, total_cost_usd: 0.01,
+        usage: { input_tokens: 2, cache_creation_input_tokens: 10, cache_read_input_tokens: 20, output_tokens: 7 } });
+});
+`);
   chmodSync(f, 0o755);
   return dir;
 }
 
-test("sin API key usa el CLI de Claude con perfil, GitHub e historial", async () => {
-  const dir = fakeClaude('echo "ARGS:$*"; cat');
+async function withPath(dir, fn) {
   const old = process.env.PATH;
   process.env.PATH = dir + path.delimiter + old;
-  try {
+  try { return await fn(); } finally { process.env.PATH = old; }
+}
+
+test("usa tu sesión de Claude Code: streaming, flags sin herramientas y contexto completo", async () => {
+  await withPath(fakeClaude(), async () => {
     let out = "";
     await streamAnswer(settings, [{ speaker: "me", text: "hola" }], "¿Cuál es tu mayor logro?", (d) => (out += d), new AbortController().signal);
-    assert.match(out, /--tools/);
+    assert.match(out, /--tools\s+--no-session-persistence/);
+    assert.match(out, /--output-format stream-json/);
+    assert.match(out, /--model m/);
     assert.match(out, /PERFIL-XYZ/);
     assert.match(out, /GH-ABC/);
+    assert.match(out, /MEM-777/);
     assert.match(out, /¿Cuál es tu mayor logro\?/);
     assert.match(out, /YO: hola/);
-  } finally { process.env.PATH = old; }
+    assert.match(out, /PUENTE HONESTO/);
+  });
 });
 
-test("si el CLI falla, el error llega con su mensaje", async () => {
-  const dir = fakeClaude('echo "no hay sesión" >&2; exit 3');
-  const old = process.env.PATH;
-  process.env.PATH = dir + path.delimiter + old;
-  try {
+test("mide el consumo y los límites de tu sesión de Claude", async () => {
+  await withPath(fakeClaude(), async () => {
+    const usage = [], rates = [];
+    setTelemetry({ usage: (u) => usage.push(u), rate: (r) => rates.push(r) });
+    await streamAnswer(settings, [], "q", () => {}, new AbortController().signal);
+    assert.deepEqual(usage, [{ bot: "copiloto", inputTokens: 32, outputTokens: 7, costUsd: 0.01, durationMs: 500 }]);
+    assert.equal(rates[0].fiveHour.utilization, 0.14);
+    assert.equal(rates[0].sevenDay.utilization, 0.56);
+    await complete(settings, "sys", "u", () => {}, new AbortController().signal, "coach");
+    assert.equal(usage.at(-1).bot, "coach");
+  });
+});
+
+test("si Claude devuelve un error, llega su mensaje", async () => {
+  await withPath(fakeClaude("error"), async () => {
+    await assert.rejects(streamAnswer(settings, [], "q", () => {}, new AbortController().signal), /Límite alcanzado/);
+  });
+});
+
+test("si el CLI falla, llega su stderr", async () => {
+  await withPath(fakeClaude("exit3"), async () => {
     await assert.rejects(streamAnswer(settings, [], "q", () => {}, new AbortController().signal), /no hay sesión/);
-  } finally { process.env.PATH = old; }
+  });
 });
 
 test("si no existe Claude Code, explica cómo instalarlo", async () => {

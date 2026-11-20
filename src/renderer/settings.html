@@ -8,16 +8,16 @@
 <body class="settings">
   <h1>Interviewer Max · Ajustes</h1>
 
-  <h2>Claves (se guardan cifradas en tu equipo)</h2>
-  <label>API key de Anthropic (Claude; déjala vacía para usar tu sesión de Claude Code) <input id="anthropicKey" type="password" placeholder="sk-ant-…" /></label>
-  <label>API key de Deepgram (transcripción en vivo) <input id="deepgramKey" type="password" /></label>
+  <h2>Transcripción y modelo</h2>
+  <p class="muted">Todo usa tu sesión de Claude Code (sin API key ni cargos extra). Asegúrate de tener <code>claude</code> instalado y con sesión iniciada.</p>
+  <label>API key de Deepgram (solo si eliges Deepgram; Whisper local es gratis) <input id="deepgramKey" type="password" /></label>
   <label>Transcripción
     <select id="stt">
       <option value="local">Local (Whisper en tu PC, sin clave, necesita internet la 1ª vez)</option>
       <option value="deepgram">Deepgram (más rápida, necesita clave)</option>
     </select>
   </label>
-  <label>Modelo <input id="model" /></label>
+  <label>Modelo de Claude <input id="model" placeholder="claude-sonnet-5-5" /></label>
   <label>Idioma
     <select id="language">
       <option value="auto">Automático (español + inglés)</option>
@@ -36,6 +36,16 @@
   <label>Pega la oferta o describe el puesto: mejora las preguntas del simulacro y las respuestas
     <textarea id="jobContext" rows="5" placeholder="Ej: Senior Backend Engineer, Java/Kotlin, banca, equipo de pagos…"></textarea>
   </label>
+
+  <h2>Guardado en la nube (opcional)</h2>
+  <p class="muted">Tu historial ya se guarda en este equipo. Si quieres copia en Supabase (plan gratuito): crea un proyecto, ejecuta <code>supabase/schema.sql</code> y pega aquí la URL y la clave <b>service_role</b> (uso personal; se guarda cifrada).</p>
+  <label>URL del proyecto <input id="supabaseUrl" placeholder="https://xxxx.supabase.co" /></label>
+  <label>Clave service_role <input id="supabaseKey" type="password" /></label>
+
+  <h2>Guardado en la nube (opcional)</h2>
+  <p class="muted">Tu historial ya se guarda en este equipo. Si quieres copia en Supabase (plan gratuito): crea un proyecto, ejecuta <code>supabase/schema.sql</code> y pega aquí la URL y la clave <b>service_role</b> (uso personal; se guarda cifrada).</p>
+  <label>URL del proyecto <input id="supabaseUrl" placeholder="https://xxxx.supabase.co" /></label>
+  <label>Clave service_role <input id="supabaseKey" type="password" /></label>
 
   <h2>Memoria de los bots</h2>
   <label>Aprendizajes acumulados (se actualiza sola al terminar cada sesión; puedes editarla o pegar aquí resúmenes)

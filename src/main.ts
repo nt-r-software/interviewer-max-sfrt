@@ -1,10 +1,12 @@
 import { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, screen, session } from "electron";
-import fs from "node:fs";
 import path from "node:path";
 import { importGithub } from "./github";
-import { complete, streamAnswer, Turn } from "./llm";
+import { complete, setTelemetry, streamAnswer, Turn } from "./llm";
 import { Practice } from "./practice";
-import { saveLog, SessionLog, summarize, updateMemory } from "./sessions";
+import { aggregate, loadHistory } from "./db";
+import { finalizeSession } from "./finalize";
+import { SessionLog } from "./sessions";
+import { UsageTracker } from "./usage";
 import { JOBS } from "./jobs";
 import { SttChannel } from "./stt";
 import { loadSettings, saveSettings } from "./store";
@@ -12,6 +14,7 @@ import { Settings, Speaker } from "./types";
 
 let overlay: BrowserWindow | null = null;
 let settingsWin: BrowserWindow | null = null;
+let dashWin: BrowserWindow | null = null;
 let settings: Settings;
 let clickThrough = false;
 
@@ -24,33 +27,42 @@ let abort: AbortController | null = null;
 const send = (ch: string, ...args: unknown[]) => overlay?.webContents.send(ch, ...args);
 
 let log = new SessionLog();
-const sessionsDir = () => path.join(app.getPath("userData"), "sessions");
-const llm = (system: string, user: string, onDelta: (t: string) => void, signal: AbortSignal) =>
-  complete(settings, system, user, onDelta, signal);
+const dataDir = () => path.join(app.getPath("userData"), "sessions");
+const tracker = new UsageTracker();
+const llm = (system: string, user: string, onDelta: (t: string) => void, signal: AbortSignal, bot?: string) =>
+  complete(settings, system, user, onDelta, signal, bot);
+setTelemetry({
+  usage: (u) => tracker.record(u),
+  rate: (r) => {
+    tracker.setRate(r);
+    send("rate", tracker.rate);
+  },
+});
 
-/** Guarda la sesión, la resume con Claude y suma lo aprendido a la memoria de los bots. */
-async function finalizeSession(): Promise<void> {
+/** Cierra la sesión actual: guarda, resume, aprende, saca estadísticas y (opcional) sincroniza. */
+async function endSession(): Promise<void> {
   if (log.isEmpty()) return send("session-status", "No hay nada que resumir todavía");
   const cur = log;
   log = new SessionLog();
-  const file = saveLog(sessionsDir(), cur);
-  send("session-status", "resumiendo sesión…");
-  try {
-    const summary = await summarize(llm, cur);
-    settings.memory = await updateMemory(llm, settings.memory, summary);
-    saveSettings(settings);
-    fs.appendFileSync(file, `\n## Resumen\n${summary}\n`);
-    send("session-summary", summary, file);
-  } catch (e: any) {
-    send("error", "No pude resumir la sesión: " + (e?.message ?? e) + ` (el registro quedó en ${file})`);
-  }
+  await finalizeSession(cur, {
+    complete: llm,
+    tracker,
+    dir: dataDir(),
+    memory: settings.memory,
+    onMemory: (m) => {
+      settings.memory = m;
+      saveSettings(settings);
+    },
+    sync: { url: settings.supabaseUrl, key: settings.supabaseKey },
+    send,
+  });
 }
 
 const practice = new Practice({
   complete: llm,
   emit: (ch, ...a) => {
     send(ch, ...a);
-    if (ch === "practice-state" && a[0] === false) void finalizeSession();
+    if (ch === "practice-state" && a[0] === false) void endSession();
   },
   record: (e) => log.add(e),
 });
@@ -83,6 +95,18 @@ function openSettings(): void {
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true },
   });
   settingsWin.loadFile(path.join(__dirname, "renderer", "settings.html"));
+}
+
+function openDashboard(): void {
+  if (dashWin && !dashWin.isDestroyed()) return dashWin.focus();
+  dashWin = new BrowserWindow({
+    width: 980,
+    height: 780,
+    title: "Interviewer Max — Panel de entrenamiento",
+    autoHideMenuBar: true,
+    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true },
+  });
+  dashWin.loadFile(path.join(__dirname, "renderer", "dashboard.html"));
 }
 
 function setClickThrough(on: boolean): void {
@@ -178,7 +202,12 @@ ipcMain.on("practice:start", (_e, opts) => {
   log.label = [JOBS.find((j) => j.id === opts?.job)?.label, opts?.custom, opts?.kind, opts?.level].filter(Boolean).join(" · ");
   practice.start(opts);
 });
-ipcMain.on("session:end", () => void finalizeSession());
+ipcMain.on("session:end", () => (practice.active ? practice.stop() : void endSession())); // practice.stop() ya cierra la sesión
+ipcMain.handle("dash:get", () => {
+  const h = loadHistory(dataDir());
+  return { history: h, agg: aggregate(h), memory: settings.memory, rate: tracker.rate };
+});
+ipcMain.on("open-dashboard", openDashboard);
 ipcMain.on("practice:stop", () => practice.stop());
 ipcMain.on("practice:done", () => void practice.finishAnswer());
 ipcMain.on("practice:skip", () => practice.skip());

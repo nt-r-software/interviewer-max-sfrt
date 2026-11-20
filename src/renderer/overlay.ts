@@ -20,7 +20,7 @@ let queued = 0; // frases pendientes de la voz del bot
 
 // ---------- Chat ----------
 
-type Kind = "them" | "me" | "ai" | "bot" | "fb" | "sum" | "err";
+type Kind = "them" | "me" | "ai" | "bot" | "fb" | "sum" | "stat" | "err";
 let current: HTMLElement | null = null; // burbuja de IA en curso
 const last: Record<string, { el: HTMLElement; t: number } | undefined> = {};
 
@@ -29,7 +29,7 @@ function bubble(kind: Kind, text: string): HTMLElement {
   el.className = "msg " + kind;
   const label = document.createElement("div");
   label.className = "who";
-  label.textContent = { them: "Entrevistador", me: "Tú", ai: "💭 Claude", bot: "🤖 Bot entrevistador", fb: "📝 Feedback", sum: "📚 Resumen de la sesión", err: "Aviso" }[kind];
+  label.textContent = { them: "Entrevistador", me: "Tú", ai: "💭 Claude", bot: "🤖 Bot entrevistador", fb: "📝 Feedback", sum: "📚 Resumen de la sesión", stat: "📊 Estadísticas de la sesión", err: "Aviso" }[kind];
   const body = document.createElement("div");
   body.className = "body";
   body.textContent = text;
@@ -211,6 +211,8 @@ function speak(text: string) {
     queued++;
     speaking = true;
     u.onend = u.onerror = () => setTimeout(() => { if (--queued <= 0) { queued = 0; speaking = false; } }, 600);
+    // Salvaguarda: si el sistema no tiene voz y nunca avisa del final, el micro no se queda mudo.
+    setTimeout(() => { speaking = false; queued = 0; }, 8000 + text.length * 90);
     synth.speak(u);
   } catch {
     speaking = false;
@@ -225,10 +227,10 @@ $<HTMLSelectElement>("plevel").value = "medio";
 
 $("practice").onclick = () => { $("picker").hidden = !$("picker").hidden; };
 $("pcancel").onclick = () => { $("picker").hidden = true; };
-$("pgo").onclick = async () => {
+$("pgo").onclick = () => {
   if (practicing) return;
   $("picker").hidden = true;
-  if (!listening) await toggle();
+  if (!listening) void toggle(); // el audio puede tardar o fallar: el simulacro arranca igual y puedes responder escribiendo
   api.practiceStart({
     job: $<HTMLSelectElement>("pjob").value,
     custom: $<HTMLInputElement>("pcustom").value,
@@ -249,7 +251,38 @@ api.on("practice-state", (on: boolean) => {
 api.on("bot-start", () => { current?.parentElement?.remove(); startStream("bot"); });
 api.on("bot-delta", (d: string) => { if (current) { current.textContent += d; log.scrollTop = log.scrollHeight; } });
 api.on("bot-end", (q: string) => { current?.parentElement?.classList.remove("streaming"); current = null; speak(q); });
-$("endsession").onclick = () => api.endSession();
+$("finish").onclick = () => api.endSession();
+$("dash").onclick = () => api.openDashboard();
+
+const pct = (w?: { utilization: number }) => (w ? Math.round(w.utilization * 100) + "%" : "—");
+const rateText = (r: any) => "Claude · 5 h: " + pct(r?.fiveHour) + " · semana: " + pct(r?.sevenDay);
+api.on("rate", (r: any) => {
+  $("rate").textContent = rateText(r);
+});
+api.on("session-stats", (s: any) => {
+  const f = (n: number) => n.toLocaleString("es-ES");
+  const rows: [string, string][] = [
+    ["⏱ Duración", s.minutes + " min"],
+    ["❓ Preguntas", String(s.questions)],
+    ["🗣 Respondidas", s.answered + " (≈" + s.avgAnswerWords + " palabras de media)"],
+    ["🤖 Llamadas a Claude", s.calls + " · " + (s.avgMs / 1000).toFixed(1) + " s de media"],
+    ["🔤 Tokens", f(s.inputTokens) + " entrada · " + f(s.outputTokens) + " salida"],
+    ["💶 Equivalente API", "≈ $" + s.costUsd.toFixed(2) + " (no se cobra con tu suscripción)"],
+    ["📊 Tu límite de 5 h", pct(s.rate?.fiveHour)],
+    ["📅 Tu límite semanal", pct(s.rate?.sevenDay)],
+  ];
+  for (const [bot, v] of Object.entries(s.byBot as Record<string, any>)) rows.push(["· " + bot, v.calls + " llamadas · " + f(v.outputTokens) + " tokens de salida"]);
+  const body = bubble("stat", "");
+  const table = document.createElement("table");
+  for (const [k, v] of rows) {
+    const tr = table.insertRow();
+    tr.insertCell().textContent = k;
+    tr.insertCell().textContent = v;
+  }
+  body.append(table);
+  if (s.rate) $("rate").textContent = rateText(s.rate);
+  setStatus(listening ? "escuchando 🟢" : "en pausa");
+});
 api.on("session-status", setStatus);
 api.on("session-summary", (text: string, file: string) => {
   setStatus(listening ? "escuchando 🟢" : "en pausa");

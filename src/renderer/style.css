@@ -19,6 +19,13 @@ button:hover { background: #3a3a50; }
 .msg.ai { align-self: stretch; max-width: 100%; background: #2a2450; border: 1px solid #5b4fd1; font-size: 15px; }
 .msg.sum { align-self: stretch; max-width: 100%; background: #1a2a45; border: 1px solid #3b6fc4; }
 .msg.sum button { margin-top: 6px; }
+.msg.stat { align-self: stretch; max-width: 100%; background: #20253a; border: 1px solid #5865a8; }
+.msg.stat table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.msg.stat td { padding: 2px 6px 2px 0; vertical-align: top; }
+.msg.stat td:first-child { color: #a8b0d8; white-space: nowrap; }
+#finish { margin: 0; border-radius: 0; padding: 11px; font-size: 14px; font-weight: 600; background: #2f9e44; color: #fff; }
+#finish:hover { background: #38b552; }
+#rate { font-size: 11px; }
 .msg.err { align-self: stretch; background: #3a1f24; color: #ffb4b4; font-size: 12px; }
 .msg.streaming .body::after { content: "▍"; opacity: .6; }
 #picker { padding: 10px 12px; background: #2a2210; border-top: 1px solid #6b5a1e; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
@@ -45,3 +52,22 @@ input, select, textarea {
 textarea { resize: vertical; }
 .primary { background: #5b6cff; padding: 8px 18px; font-size: 14px; }
 .actions { margin-top: 20px; }
+
+/* ---- Panel ---- */
+body.dash { padding: 18px 28px 50px; background: #14141b; color: #eceefa; max-width: 1000px; margin: 0 auto; }
+body.dash h2 { margin-top: 28px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 14px; }
+.kpi { background: #1c1c26; border: 1px solid #2a2a3a; border-radius: 12px; padding: 12px 14px; }
+.kv { font-size: 22px; font-weight: 700; color: #8b96ff; } .kl { font-size: 12px; color: #a2a7c4; } .kh { font-size: 11px; color: #7f84a0; margin-top: 2px; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.gauge, .card-box { background: #1c1c26; border: 1px solid #2a2a3a; border-radius: 12px; padding: 14px; }
+.gt { font-size: 13px; margin-bottom: 8px; }
+.bar { height: 10px; border-radius: 6px; background: #2a2a3a; overflow: hidden; flex: 1; }
+.fill { height: 100%; background: linear-gradient(90deg, #5b6cff, #3ddc84); border-radius: 6px; }
+.fill.hot { background: linear-gradient(90deg, #ffb43b, #ff5d5d); }
+.gv { font-size: 13px; margin-top: 6px; }
+.botrow { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 13px; }
+.bn { width: 140px; } .bv { color: #a2a7c4; font-size: 12px; white-space: nowrap; }
+pre.memory { white-space: pre-wrap; background: #14141b; border: 1px solid #2a2a3a; border-radius: 8px; padding: 10px; font: 12.5px/1.5 "Segoe UI", system-ui, sans-serif; margin: 8px 0 0; }
+details.sess { background: #1c1c26; border: 1px solid #2a2a3a; border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
+details.sess summary { cursor: pointer; font-size: 13px; }

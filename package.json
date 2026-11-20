@@ -7,12 +7,13 @@
     "build": "tsc -p tsconfig.json && node scripts/build-renderer.mjs",
     "start": "npm run build && electron .",
     "dist": "npm run build && electron-builder",
+    "dist:dir": "npm run build && electron-builder --dir --publish never",
     "dist:win": "npm run build && electron-builder --win",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node --test \"tests/*.test.mjs\""
+    "test": "npm run build && node --test \"tests/*.test.mjs\"",
+    "test:app": "npm run dist:dir && xvfb-run -a node --test tests/electron.test.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.40.0",
     "@huggingface/transformers": "^3.3.3",
     "ws": "^8.18.0"
   },
@@ -47,6 +48,11 @@
       "target": [
         "AppImage"
       ]
-    }
-  }
+    },
+    "directories": {
+      "output": "release"
+    },
+    "artifactName": "Interviewer-Max-${version}-${os}.${ext}"
+  },
+  "author": "Interviewer Max"
 }

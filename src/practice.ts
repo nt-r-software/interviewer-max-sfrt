@@ -15,7 +15,7 @@ Formato EXACTO (3 líneas, máx. 70 palabras en total):
 💡 <cómo decirlo mejor en 1-2 frases, usando SOLO hechos reales del perfil / GitHub; nunca inventes>
 La persona tiene síndrome del impostor: señala los logros reales que haya infravalorado. Responde en el idioma de su respuesta.`;
 
-type CompleteFn = (system: string, user: string, onDelta: (t: string) => void, signal: AbortSignal) => Promise<void>;
+type CompleteFn = (system: string, user: string, onDelta: (t: string) => void, signal: AbortSignal, bot?: string) => Promise<void>;
 
 export interface PracticeDeps {
   complete: CompleteFn;
@@ -85,6 +85,7 @@ export class Practice {
           if (gen === this.gen) this.d.emit("fb-delta", t);
         },
         ac.signal,
+        "coach",
       );
     } catch (e: any) {
       if (gen === this.gen) this.d.emit("error", e?.message ?? String(e));
@@ -116,6 +117,7 @@ export class Practice {
           if (gen === this.gen) this.d.emit("bot-delta", t);
         },
         ac.signal,
+        "entrevistador",
       );
     } catch (e: any) {
       if (gen === this.gen) this.d.emit("error", e?.message ?? String(e));

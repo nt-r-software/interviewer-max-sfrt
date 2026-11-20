@@ -30,7 +30,8 @@ window.api = {
   getSettings: async () => structuredClone(window.__settings),
   importGithub: async (u) => { window.__calls.push(["importGithub", u]); return "Lenguajes: TypeScript\\n- repo-demo"; },
   startListening: rec("startListening"), stopListening: rec("stopListening"), ask: rec("ask"),
-  openSettings: rec("openSettings"), practiceStart: rec("practiceStart"), practiceStop: rec("practiceStop"), practiceDone: rec("practiceDone"), practiceSkip: rec("practiceSkip"), toggleClickThrough: rec("toggleClickThrough"), quit: rec("quit"),
+  openSettings: rec("openSettings"), openDashboard: rec("openDashboard"), endSession: rec("endSession"),
+  getDashboard: async () => window.__dash, practiceStart: rec("practiceStart"), practiceStop: rec("practiceStop"), practiceDone: rec("practiceDone"), practiceSkip: rec("practiceSkip"), toggleClickThrough: rec("toggleClickThrough"), quit: rec("quit"),
   on: (ch, cb) => { (window.__handlers[ch] ||= []).push(cb); },
 };
 window.__emit = (ch, ...a) => (window.__handlers[ch] || []).forEach((cb) => cb(...a));
@@ -50,7 +51,7 @@ window.Worker = class {
 
 let browser;
 before(async () => {
-  browser = await chromium.launch({ args: [
+  browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: [
     "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
     "--use-file-for-fake-audio-capture=" + wav, "--autoplay-policy=no-user-gesture-required"] });
 });
@@ -215,9 +216,8 @@ test("resumen de sesión: botón, estado, burbuja con ruta y copiar", async () =
   await page.evaluate(() => {
     window.__copied = "";
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (t) => { window.__copied = t; } } });
-    window.api.endSession = () => window.__calls.push(["endSession"]);
   });
-  await page.click("#endsession");
+  await page.click("#finish");
   assert.equal((await calls(page, "endSession")).length, 1);
   await page.evaluate(() => __emit("session-status", "resumiendo sesión…"));
   assert.equal(await page.locator("#status").textContent(), "resumiendo sesión…");
@@ -234,4 +234,67 @@ test("ajustes: la memoria se carga y se guarda", async () => {
   await page.fill("#memory", "### editada");
   await page.click("#save");
   assert.equal((await calls(page, "saveSettings"))[0][1].memory, "### editada");
+});
+
+test("«✔ Acabado» está abajo y lanza el cierre; salen estadísticas y tu consumo de Claude", async () => {
+  const page = await open("overlay.html");
+  const box = await page.locator("#finish").boundingBox();
+  const vh = page.viewportSize().height;
+  assert.ok(box.y + box.height >= vh - 2, "el botón debe quedar pegado al borde inferior");
+  await page.click("#finish");
+  assert.equal((await calls(page, "endSession")).length, 1);
+  await page.evaluate(() => __emit("rate", { fiveHour: { utilization: 0.14, resetsAt: 1 }, sevenDay: { utilization: 0.56, resetsAt: 2 } }));
+  assert.match(await page.locator("#rate").textContent(), /5 h: 14% · semana: 56%/);
+  await page.evaluate(() => __emit("session-stats", {
+    minutes: 12.5, questions: 6, answered: 5, avgAnswerWords: 48, calls: 11, avgMs: 2400, inputTokens: 12000, outputTokens: 900, costUsd: 0.37,
+    byBot: { coach: { calls: 5, outputTokens: 400, costUsd: 0.1 } }, rate: { fiveHour: { utilization: 0.21 }, sevenDay: { utilization: 0.6 } } }));
+  const text = await page.locator(".msg.stat").textContent();
+  for (const re of [/12\.5 min/, /6/, /48 palabras/, /Llamadas a Claude11 · 2\.4 s/, /12\.000 entrada|12,000 entrada|12000 entrada/, /≈ \$0\.37/, /no se cobra/, /21%/, /60%/, /coach/])
+    assert.match(text, re);
+  assert.match(await page.locator("#rate").textContent(), /5 h: 21%/);
+});
+
+test("panel de entrenamiento: KPIs, límites de Claude, consumo por bot, memoria y sesiones", async () => {
+  const page = await browser.newPage();
+  await page.addInitScript(MOCKS);
+  await page.addInitScript(() => {
+    window.__dash = {
+      agg: { sessions: 3, practiceSessions: 2, questions: 14, answered: 12, minutes: 41, calls: 30, inputTokens: 50000, outputTokens: 4200, costUsd: 1.234, avgAnswerWords: 52,
+        byBot: { coach: { calls: 12, outputTokens: 1500, costUsd: 0.4 }, entrevistador: { calls: 12, outputTokens: 900, costUsd: 0.3 }, resumen: { calls: 3, outputTokens: 700, costUsd: 0.2 } } },
+      memory: "### 2026-11-20\nBuen uso de STAR\nHueco: Kubernetes",
+      rate: { fiveHour: { utilization: 0.85, resetsAt: 1795194600 }, sevenDay: { utilization: 0.4, resetsAt: 1795287600 } },
+      history: [{ id: "a", date: "2026-11-20T10:00:00Z", mode: "simulacro", label: "DevOps", questions: 5, minutes: 12, summary: "**Sesión:** DevOps" }],
+    };
+  });
+  const errors = []; page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto(pathToFileURL(path.join(root, "dist/renderer", "dashboard.html")).href);
+  await page.waitForSelector(".kpi");
+  assert.equal(await page.locator(".kpi").count(), 7);
+  const kpis = await page.locator("#kpis").textContent();
+  assert.match(kpis, /Sesiones/); assert.match(kpis, /≈ \$1\.23/); assert.match(kpis, /52 palabras/);
+  assert.match(await page.locator("#rate").textContent(), /85% usado/);
+  assert.match(await page.locator("#rate").textContent(), /40% usado/);
+  assert.ok(await page.locator("#rate .fill.hot").count() === 1, "≥80% se marca en alerta");
+  assert.equal(await page.locator(".botrow").count(), 3);
+  assert.match(await page.locator("#bots").textContent(), /Coach[\s\S]*12 llamadas/);
+  assert.match(await page.locator("#agent").textContent(), /Entrenado con 3 sesiones/);
+  assert.match(await page.locator("#agent pre").textContent(), /Hueco: Kubernetes/);
+  assert.match(await page.locator("details.sess summary").textContent(), /simulacro · DevOps · 5 preguntas/);
+  assert.deepEqual(errors, []);
+});
+
+test("cabecera: el botón 📊 Panel abre el panel", async () => {
+  const page = await open("overlay.html");
+  await page.click("#dash");
+  assert.equal((await calls(page, "openDashboard")).length, 1);
+});
+
+test("ajustes: sin API key de Anthropic y con Supabase opcional", async () => {
+  const page = await open("settings.html", { supabaseUrl: "https://x.supabase.co" });
+  assert.equal(await page.locator("#anthropicKey").count(), 0);
+  await page.waitForFunction(() => document.getElementById("supabaseUrl").value.includes("supabase.co"));
+  await page.fill("#supabaseKey", "SECRETO");
+  await page.click("#save");
+  const saved = (await calls(page, "saveSettings"))[0][1];
+  assert.equal(saved.supabaseKey, "SECRETO");
 });

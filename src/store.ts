@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_SETTINGS, Settings } from "./types";
 
-const SECRET_KEYS: (keyof Settings)[] = ["anthropicKey", "deepgramKey", "githubToken"];
+const SECRET_KEYS: (keyof Settings)[] = ["deepgramKey", "githubToken", "supabaseKey"];
 
 function file(): string {
   return path.join(app.getPath("userData"), "settings.json");

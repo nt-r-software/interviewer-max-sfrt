@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld("api", {
   practiceStop: () => ipcRenderer.send("practice:stop"),
   practiceDone: () => ipcRenderer.send("practice:done"),
   practiceSkip: () => ipcRenderer.send("practice:skip"),
+  openDashboard: () => ipcRenderer.send("open-dashboard"),
+  getDashboard: () => ipcRenderer.invoke("dash:get"),
   endSession: () => ipcRenderer.send("session:end"),
   ask: (q: string) => ipcRenderer.send("ask", q),
   openSettings: () => ipcRenderer.send("open-settings"),

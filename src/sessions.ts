@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export type CompleteFn = (system: string, user: string, onDelta: (t: string) => void, signal: AbortSignal) => Promise<void>;
+export type CompleteFn = (system: string, user: string, onDelta: (t: string) => void, signal: AbortSignal, bot?: string) => Promise<void>;
 
 export interface Entry {
   question: string;
@@ -50,18 +50,19 @@ export class SessionLog {
 }
 
 export const SUMMARY_SYSTEM = `Resume esta sesión de entrevista/entrenamiento para la MEMORIA del coach, que usará esa información en futuras sesiones.
-Markdown, máx. 180 palabras, con estas secciones:
+Markdown, máx. 220 palabras, con estas secciones:
 **Sesión:** puesto y modo en una línea.
 **Fortalezas demostradas:** lo que hizo bien.
 **A mejorar:** puntos concretos y accionables.
 **Hechos reales nuevos:** logros, cifras, proyectos o historias que ELLA/EL aportó en sus respuestas y que no estén ya en su perfil. Solo lo que dijo; no inventes.
+**Huecos:** temas preguntados que NO pudo respaldar con experiencia real. Para cada uno, sugiere que se pregunte si en algún punto REAL de su carrera tocó algo parecido y, solo si es cierto, lo añada a su perfil. No des por hecho que lo hizo.
 **Siguiente práctica:** qué entrenar la próxima vez.`;
 
 const COMPRESS_SYSTEM = `Fusiona y condensa estas notas de memoria de un coach de entrevistas. Elimina duplicados, conserva lo más útil (hechos reales aportados, fortalezas, puntos a mejorar recurrentes, práctica pendiente) y ordena por tema. Markdown, máx. 3500 caracteres. Devuelve solo las notas.`;
 
 async function collect(complete: CompleteFn, system: string, user: string): Promise<string> {
   let out = "";
-  await complete(system, user, (t) => (out += t), new AbortController().signal);
+  await complete(system, user, (t) => (out += t), new AbortController().signal, "resumen");
   return out.trim();
 }
 

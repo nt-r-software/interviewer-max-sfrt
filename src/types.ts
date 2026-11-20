@@ -1,8 +1,9 @@
 export interface Settings {
-  anthropicKey: string;
   deepgramKey: string;
   githubUser: string;
   githubToken: string;
+  supabaseUrl: string; // opcional: sincronizar historial
+  supabaseKey: string;
   model: string;
   profile: string; // CV, historias STAR, puntos fuertes (escrito por ti)
   githubSummary: string; // generado desde GitHub
@@ -13,10 +14,11 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  anthropicKey: "",
   deepgramKey: "",
   githubUser: "",
   githubToken: "",
+  supabaseUrl: "",
+  supabaseKey: "",
   model: "claude-sonnet-5-5",
   profile: "",
   githubSummary: "",

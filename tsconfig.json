@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "lib": ["ES2022", "DOM"]
   },
-  "include": ["src/main.ts", "src/preload.ts", "src/stt.ts", "src/llm.ts", "src/practice.ts", "src/sessions.ts", "src/jobs.ts", "src/github.ts", "src/store.ts", "src/types.ts"]
+  "include": ["src/main.ts", "src/preload.ts", "src/stt.ts", "src/llm.ts", "src/practice.ts", "src/sessions.ts", "src/jobs.ts", "src/usage.ts", "src/finalize.ts", "src/db.ts", "src/sync.ts", "src/github.ts", "src/store.ts", "src/types.ts"]
 }
