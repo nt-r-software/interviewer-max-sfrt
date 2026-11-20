@@ -6,6 +6,7 @@ const on = (ch: string, cb: (...a: any[]) => void) => {
 
 contextBridge.exposeInMainWorld("api", {
   sendAudio: (speaker: "them" | "me", buf: ArrayBuffer) => ipcRenderer.send("audio", speaker, buf),
+  localTranscript: (speaker: "them" | "me", text: string) => ipcRenderer.send("local-transcript", speaker, text),
   getSettings: () => ipcRenderer.invoke("settings:get"),
   saveSettings: (s: unknown) => ipcRenderer.invoke("settings:save", s),
   importGithub: (user: string, token: string) => ipcRenderer.invoke("github:import", user, token),

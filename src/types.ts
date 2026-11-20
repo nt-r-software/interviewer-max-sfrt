@@ -7,6 +7,7 @@ export interface Settings {
   profile: string; // CV, historias STAR, puntos fuertes (escrito por ti)
   githubSummary: string; // generado desde GitHub
   language: "auto" | "es" | "en";
+  stt: "local" | "deepgram"; // local = Whisper en tu PC, sin clave
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: Settings = {
   profile: "",
   githubSummary: "",
   language: "auto",
+  stt: "local",
 };
 
 export type Speaker = "them" | "me";

@@ -1,10 +1,11 @@
 # Interviewer Max
 
-Copiloto de entrevistas (Windows / Mac / Linux). Overlay pequeño siempre encima de todas las apps que:
+Copiloto de entrevistas (Windows / Mac / Linux). Una ventana pequeña tipo chat, siempre encima, que arranca en modo escucha:
 
-1. Escucha al entrevistador (audio del sistema) y a ti (micrófono) en español e inglés.
-2. Usa tu perfil + resumen de tus repos de GitHub como contexto.
-3. Te muestra 2-4 viñetas breves con la respuesta, generadas por Claude.
+1. Captura el audio de la llamada (sistema = entrevistador) y tu micro, y lo transcribe en español e inglés.
+2. **Whisper local por defecto: sin claves**, solo internet la primera vez (modelo ~80 MB). Deepgram es opcional.
+3. Claude «piensa» en el chat qué decir (2-4 viñetas) usando tu perfil y tus repos de GitHub.
+4. **Sin API key de Anthropic**: si no pones ninguna, usa tu sesión de Claude Code (`claude` instalado y con login).
 
 ## Uso
 
@@ -14,8 +15,8 @@ npm start          # modo desarrollo
 npm run dist:win   # genera el .exe (portable + instalador) en release/
 ```
 
-Primer arranque: abre Ajustes y pon tu API key de Anthropic, tu API key de Deepgram,
-tu usuario de GitHub (importa tus repos) y pega tu perfil/historias.
+Primer arranque: en Ajustes pon tu usuario de GitHub (importa tus repos) y pega tu perfil/historias.
+No hace falta ninguna clave si tienes Claude Code instalado e iniciado.
 
 ## Atajos
 

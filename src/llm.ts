@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { spawn } from "node:child_process";
 import { Settings } from "./types";
 
 const SYSTEM = `Eres un coach de entrevistas en tiempo real. La persona a la que ayudas está EN una entrevista ahora mismo y verá tu respuesta en un recuadro muy pequeño.
@@ -23,8 +24,6 @@ export async function streamAnswer(
   onDelta: (t: string) => void,
   signal: AbortSignal,
 ): Promise<void> {
-  if (!s.anthropicKey) throw new Error("Falta la API key de Anthropic (Ajustes).");
-  const client = new Anthropic({ apiKey: s.anthropicKey });
 
   const context =
     `# PERFIL DE LA PERSONA\n${s.profile || "(vacío)"}\n\n# RESUMEN DE GITHUB\n${s.githubSummary || "(vacío)"}` +
@@ -35,6 +34,12 @@ export async function streamAnswer(
     .map((t) => `${t.speaker === "them" ? "ENTREVISTADOR" : "YO"}: ${t.text}`)
     .join("\n");
 
+  const userMsg = `Conversación reciente:\n${convo || "(inicio)"}\n\nPregunta actual del entrevistador:\n${question}\n\nDame las viñetas.`;
+
+  // Sin API key: usa tu Claude ya iniciado en este PC mediante Claude Code (`claude -p`).
+  if (!s.anthropicKey) return cliAnswer(s, `${SYSTEM}\n\n${context}\n\n${userMsg}`, onDelta, signal);
+
+  const client = new Anthropic({ apiKey: s.anthropicKey });
   const stream = client.messages.stream(
     {
       model: s.model || "claude-sonnet-5-5",
@@ -46,7 +51,7 @@ export async function streamAnswer(
       messages: [
         {
           role: "user",
-          content: `Conversación reciente:\n${convo || "(inicio)"}\n\nPregunta actual del entrevistador:\n${question}\n\nDame las viñetas.`,
+          content: userMsg,
         },
       ],
     },
@@ -54,4 +59,21 @@ export async function streamAnswer(
   );
   stream.on("text", onDelta);
   await stream.finalMessage();
+}
+
+function cliAnswer(s: Settings, prompt: string, onDelta: (t: string) => void, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const args = ["-p", "--tools", "", "--no-session-persistence"];
+    if (s.model) args.push("--model", s.model);
+    const p = spawn("claude", args, { shell: process.platform === "win32", signal });
+    let err = "";
+    p.stdout.on("data", (d) => onDelta(d.toString()));
+    p.stderr.on("data", (d) => (err += d.toString()));
+    p.on("error", (e: any) =>
+      reject(new Error(e.code === "ENOENT" ? "No encuentro Claude Code. Instálalo (npm i -g @anthropic-ai/claude-code) e inicia sesión, o pon una API key en Ajustes." : e.message)),
+    );
+    p.on("close", (code) => (code === 0 || signal.aborted ? resolve() : reject(new Error(err.trim() || `claude salió con código ${code}`))));
+    p.stdin.write(prompt);
+    p.stdin.end();
+  });
 }

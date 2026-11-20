@@ -9,8 +9,14 @@
   <h1>Interviewer Max · Ajustes</h1>
 
   <h2>Claves (se guardan cifradas en tu equipo)</h2>
-  <label>API key de Anthropic (Claude) <input id="anthropicKey" type="password" placeholder="sk-ant-…" /></label>
+  <label>API key de Anthropic (Claude; déjala vacía para usar tu sesión de Claude Code) <input id="anthropicKey" type="password" placeholder="sk-ant-…" /></label>
   <label>API key de Deepgram (transcripción en vivo) <input id="deepgramKey" type="password" /></label>
+  <label>Transcripción
+    <select id="stt">
+      <option value="local">Local (Whisper en tu PC, sin clave, necesita internet la 1ª vez)</option>
+      <option value="deepgram">Deepgram (más rápida, necesita clave)</option>
+    </select>
+  </label>
   <label>Modelo <input id="model" /></label>
   <label>Idioma
     <select id="language">

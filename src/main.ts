@@ -21,20 +21,15 @@ const send = (ch: string, ...args: unknown[]) => overlay?.webContents.send(ch, .
 
 function createOverlay(): void {
   const { workArea } = screen.getPrimaryDisplay();
-  const w = 420;
-  const h = 230;
   overlay = new BrowserWindow({
-    width: w,
-    height: h,
-    x: workArea.x + workArea.width - w - 20,
+    width: 440,
+    height: 600,
+    x: workArea.x + workArea.width - 440 - 20,
     y: workArea.y + 20,
-    frame: false,
-    transparent: true,
+    title: "Interviewer Max",
+    backgroundColor: "#14141b",
+    autoHideMenuBar: true,
     alwaysOnTop: true,
-    resizable: true,
-    skipTaskbar: true,
-    hasShadow: false,
-    focusable: true,
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true },
   });
   overlay.setAlwaysOnTop(true, "screen-saver");
@@ -99,7 +94,8 @@ function onTranscript(e: { speaker: Speaker; text: string; final: boolean; speec
 
 function startListening(): void {
   stopListening();
-  if (!settings.deepgramKey) return send("error", "Falta la API key de Deepgram (Ajustes).");
+  if (settings.stt === "local") return send("listening", true); // el renderer transcribe con Whisper
+  if (!settings.deepgramKey) return send("error", "Falta la API key de Deepgram (Ajustes) o usa la transcripción local.");
   for (const sp of ["them", "me"] as Speaker[]) {
     const ch = new SttChannel(sp, settings, onTranscript, (m) => send("error", m));
     ch.start();
@@ -126,9 +122,16 @@ ipcMain.handle("settings:save", (_e, s: Settings) => {
   return true;
 });
 ipcMain.handle("github:import", async (_e, user: string, token: string) => importGithub(user, token));
+ipcMain.on("local-transcript", (_e, speaker: Speaker, text: string) =>
+  onTranscript({ speaker, text, final: true, speechFinal: true }),
+);
+ipcMain.handle("stt-mode", () => settings.stt);
 ipcMain.on("listen:start", startListening);
 ipcMain.on("listen:stop", stopListening);
-ipcMain.on("ask", (_e, q: string) => q.trim() && void answer(q.trim()));
+ipcMain.on("ask", (_e, q: string) => {
+  const text = q.trim() || pending || [...history].reverse().find((t) => t.speaker === "them")?.text || "";
+  if (text) void answer(text);
+});
 ipcMain.on("open-settings", openSettings);
 ipcMain.on("quit", () => app.quit());
 ipcMain.on("toggle-click-through", () => setClickThrough(!clickThrough));
@@ -146,7 +149,7 @@ app.whenReady().then(() => {
   });
 
   createOverlay();
-  if (!settings.anthropicKey || !settings.deepgramKey) openSettings();
+  if (!settings.profile && !settings.githubSummary) openSettings();
 
   globalShortcut.register("CommandOrControl+Shift+H", () => {
     if (!overlay) return;

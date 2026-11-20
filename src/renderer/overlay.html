@@ -5,20 +5,22 @@
   <title>Interviewer Max</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body class="overlay">
-  <div id="card">
-    <div id="bar">
-      <span id="dot"></span>
-      <span id="title">Interviewer Max</span>
-      <span class="spacer"></span>
-      <button id="listen" title="Empezar/parar a escuchar">▶ Escuchar</button>
-      <button id="gear" title="Ajustes (Ctrl+Shift+S)">⚙</button>
-      <button id="quit" title="Salir">✕</button>
-    </div>
-    <div id="heard" title="Lo que oigo"></div>
-    <div id="answer"><span class="muted">Pulsa «Escuchar». Ctrl+Shift+H oculta · Ctrl+Shift+C modo click-through · Ctrl+Shift+Espacio responde ya.</span></div>
-    <input id="manual" placeholder="O escribe la pregunta y pulsa Enter…" />
-  </div>
+<body class="chat">
+  <header>
+    <span id="dot"></span>
+    <strong>Interviewer Max</strong>
+    <span id="status" class="muted">iniciando…</span>
+    <span class="spacer"></span>
+    <button id="listen" title="Empezar/parar a escuchar">■ Parar</button>
+    <button id="gear" title="Ajustes (Ctrl+Shift+S)">⚙</button>
+  </header>
+  <main id="log">
+    <div class="hint">Escuchando la llamada (audio del sistema) y tu micro. Cuando el entrevistador pregunte, verás aquí 💭 lo que Claude piensa que deberías decir.</div>
+  </main>
+  <footer>
+    <input id="manual" placeholder="Escribe una pregunta y Enter (o pulsa «Responder ya»)…" />
+    <button id="now" title="Ctrl+Shift+Espacio">Responder ya</button>
+  </footer>
   <script src="overlay.js"></script>
 </body>
 </html>
