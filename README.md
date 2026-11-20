@@ -33,3 +33,14 @@ También puedes escribir la pregunta en la caja de texto del overlay.
 
 - Las claves se guardan cifradas con el almacén del sistema (Electron `safeStorage`).
 - Respeta las normas de cada entrevista respecto al uso de ayudas con IA.
+
+## Tests
+
+```bash
+npx playwright install chromium   # solo la primera vez
+npm test
+```
+
+- `tests/ui.test.mjs`: interfaz en Chromium real con audio falso (arranque, segmentación por silencios, chat, streaming, errores, ajustes). Whisper y el proceso principal van simulados.
+- `tests/backend.test.mjs`: Claude vía CLI (éxito, fallo, no instalado) e importación de GitHub.
+- No cubren: Whisper real, captura de audio del sistema en Windows ni el overlay de Electron.
